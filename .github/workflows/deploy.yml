@@ -1,0 +1,71 @@
+name: Deploy
+
+on:
+  # deploy when the site code changes
+  push:
+    branches: [main]
+  # deploy when the notes repo pings us (set up in the Notes repo)
+  repository_dispatch:
+    types: [notes-updated]
+  # manual button in the Actions tab
+  workflow_dispatch:
+
+permissions:
+  id-token: write # required to request the OIDC token for AWS
+  contents: read
+
+concurrency:
+  group: deploy
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the site
+        uses: actions/checkout@v4
+
+      # Clone the published notes into ./notes — the same path the local
+      # `notes` symlink uses, so `npm run build:notes` (--source ../notes) works
+      # unchanged. In CI `notes` is a fresh clone; locally it's the vault symlink.
+      - name: Clone published notes
+        run: git clone --depth 1 https://github.com/ronchuxia/Notes.git notes
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Build the notes index from the cloned notes
+        working-directory: frontend
+        run: npm run build:notes
+
+      - name: Build the site
+        working-directory: frontend
+        run: npm run build
+
+      - name: Configure AWS credentials (OIDC, no stored keys)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::876405694561:role/github-actions-homepage-deploy
+          aws-region: us-east-1
+
+      - name: Upload to S3
+        working-directory: frontend
+        run: aws s3 sync dist/ s3://xiachu-homepage --delete
+
+      - name: Set cache headers
+        working-directory: frontend
+        run: |
+          aws s3 cp dist/index.html s3://xiachu-homepage/index.html \
+            --cache-control no-cache --content-type text/html
+          aws s3 sync dist/assets/ s3://xiachu-homepage/assets/ \
+            --cache-control max-age=31536000
+          aws s3 sync dist/notes/ s3://xiachu-homepage/notes/ \
+            --cache-control max-age=300
