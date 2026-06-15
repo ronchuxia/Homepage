@@ -1,0 +1,77 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Notes reader spacing. Scoped to `.note-prose` (the notes article) so the
+   Canvas / blind-spot prose keeps default spacing. */
+
+/* A paragraph that introduces a list should hug it: shrink the gap between an
+   intro line (e.g. "Based on TTC:") and the list right below. Both the
+   paragraph's bottom margin and the list's top margin are reduced because
+   vertical margins collapse to the larger of the two. */
+.note-prose p:has(+ ul),
+.note-prose p:has(+ ol) {
+  margin-bottom: 0.5em;
+}
+
+.note-prose p + ul,
+.note-prose p + ol {
+  margin-top: 0.5em;
+}
+
+/* A list item's first line must not add a top margin. In a loose list that
+   margin collapses upward through the list and item, which would otherwise
+   inflate the gap between a parent item's text and its nested list well beyond
+   the p→list hug above. */
+.note-prose li > :first-child {
+  margin-top: 0;
+}
+
+/* Wide gap between sections: between consecutive paragraphs, and between a list
+   and the new paragraph that follows it. One knob (--para-gap) controls both.
+   Using sibling selectors (not a margin on every <p>) keeps the spacing against
+   headings and $$ math blocks at their normal size. */
+.note-prose {
+  --para-gap: 2em;
+  --formula-gap: 0.5em;
+  --header-top-gap: 2em;
+  --header-bottom-gap: 0.3em;
+}
+
+.note-prose p + p,
+.note-prose ul + p,
+.note-prose ol + p {
+  margin-top: var(--para-gap);
+}
+
+/* Tighten the space in front of and behind display ($$) formulas. Both the
+   formula's own margins and the neighbouring elements' adjacent margins are
+   reduced, because collapsing margins take the larger of the two. */
+.note-prose .katex-display {
+  margin-top: var(--formula-gap);
+  margin-bottom: var(--formula-gap);
+}
+
+.note-prose > :has(+ .katex-display) {
+  margin-bottom: var(--formula-gap);
+}
+
+.note-prose > .katex-display + :not(:is(h1, h2, h3, h4, h5, h6)) {
+  margin-top: var(--formula-gap);
+}
+
+/* Section headers: more space in front (only when the heading follows other
+   content, so the note's first heading isn't pushed down), and less space
+   behind it so the heading hugs its first line. The "behind" gap reduces both
+   the heading's bottom margin and the following element's top margin. */
+.note-prose * + :is(h1, h2, h3, h4, h5, h6) {
+  margin-top: var(--header-top-gap);
+}
+
+.note-prose :is(h1, h2, h3, h4, h5, h6) {
+  margin-bottom: var(--header-bottom-gap);
+}
+
+.note-prose :is(h1, h2, h3, h4, h5, h6) + * {
+  margin-top: var(--header-bottom-gap);
+}
