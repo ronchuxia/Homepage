@@ -369,6 +369,8 @@ const NEIGHBORS = [-1, 1].map((side) => {
 export default function ReverseParkingDemo() {
   // 'wide' = wide aisle, both park (default); 'narrow' = 6 m aisle, head-in jams.
   const [mode, setMode] = useState('wide');
+  const [selectedMode, setSelectedMode] = useState('wide');
+  const [isFigureTransitioning, setIsFigureTransitioning] = useState(false);
 
   // Narrow mode crops the figure to the 6 m aisle; wide mode shows the deep swing.
   const CH = mode === 'narrow' ? CH_NARROW : CH_WIDE;
@@ -382,12 +384,39 @@ export default function ReverseParkingDemo() {
   const narrowBtnRef = useRef(null);
   const pillRef = useRef(null);
   const pillPlacedRef = useRef(false);
+  const transitionTimerRef = useRef(null);
+  const transitionFrameRef = useRef(null);
+
+  function switchMode(nextMode) {
+    if (nextMode === selectedMode) {
+      return;
+    }
+
+    clearTimeout(transitionTimerRef.current);
+    cancelAnimationFrame(transitionFrameRef.current);
+    setSelectedMode(nextMode);
+    setIsFigureTransitioning(true);
+
+    transitionTimerRef.current = window.setTimeout(() => {
+      setMode(nextMode);
+      transitionFrameRef.current = window.requestAnimationFrame(() => {
+        setIsFigureTransitioning(false);
+      });
+    }, 175);
+  }
+
+  useEffect(() => {
+    return () => {
+      clearTimeout(transitionTimerRef.current);
+      cancelAnimationFrame(transitionFrameRef.current);
+    };
+  }, []);
 
   useLayoutEffect(() => {
     const place = (animate) => {
       const cont = toggleRef.current;
       const pill = pillRef.current;
-      const btn = (mode === 'wide' ? wideBtnRef : narrowBtnRef).current;
+      const btn = (selectedMode === 'wide' ? wideBtnRef : narrowBtnRef).current;
       if (!cont || !pill || !btn) return;
       const cr = cont.getBoundingClientRect();
       const br = btn.getBoundingClientRect();
@@ -404,7 +433,7 @@ export default function ReverseParkingDemo() {
     const onResize = () => place(false);
     window.addEventListener('resize', onResize);
     return () => window.removeEventListener('resize', onResize);
-  }, [mode]);
+  }, [selectedMode]);
 
   useEffect(() => {
     const setup = (cv) => {
@@ -585,9 +614,9 @@ export default function ReverseParkingDemo() {
         <button
           ref={wideBtnRef}
           type="button"
-          onClick={() => setMode('wide')}
+          onClick={() => switchMode('wide')}
           className={`relative z-10 rounded-md px-3 py-2 font-medium transition-colors ${
-            mode === 'wide' ? 'text-sky-700' : 'text-neutral-600 hover:text-sky-700'
+            selectedMode === 'wide' ? 'text-sky-700' : 'text-neutral-600 hover:text-sky-700'
           }`}
         >
           Wide aisle
@@ -595,16 +624,20 @@ export default function ReverseParkingDemo() {
         <button
           ref={narrowBtnRef}
           type="button"
-          onClick={() => setMode('narrow')}
+          onClick={() => switchMode('narrow')}
           className={`relative z-10 rounded-md px-3 py-2 font-medium transition-colors ${
-            mode === 'narrow' ? 'text-sky-700' : 'text-neutral-600 hover:text-sky-700'
+            selectedMode === 'narrow' ? 'text-sky-700' : 'text-neutral-600 hover:text-sky-700'
           }`}
         >
           Narrow aisle
         </button>
       </div>
 
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+      <div
+        className={`grid grid-cols-1 gap-6 transition-[opacity,transform] duration-[350ms] ease-out motion-reduce:transition-none md:grid-cols-2 ${
+          isFigureTransitioning ? 'translate-y-1 opacity-35' : 'translate-y-0 opacity-100'
+        }`}
+      >
         <figure className="min-w-0">
           <figcaption className="mb-2 text-sm font-medium text-neutral-700">
             Head-in Parking
