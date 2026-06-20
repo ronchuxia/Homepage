@@ -439,19 +439,19 @@ export default function Notes() {
                 remarkPlugins={[remarkMath]}
                 rehypePlugins={[rehypeKatex, rehypeHighlight]}
                 components={{
-                  code: ({ node, className = '', children, ...props }) => {
+                  pre: ({ node, className = '', children, ...props }) => {
                     const spacingClass = getCodeBlockSpacingClass(
                       node,
                       markdownLines,
                     );
 
                     return (
-                      <code
+                      <pre
                         className={[className, spacingClass].filter(Boolean).join(' ')}
                         {...props}
                       >
                         {children}
-                      </code>
+                      </pre>
                     );
                   },
                   img: ({ src = '', alt = '' }) => (

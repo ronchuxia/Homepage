@@ -46,39 +46,55 @@
   margin-top: var(--para-gap);
 }
 
+/* Inline code is styled separately from fenced code blocks. Tailwind
+   Typography adds decorative backticks by default, so remove those and give
+   single-backtick code a compact inline treatment. */
+.note-prose :not(pre) > code {
+  border-radius: 0.25rem;
+  background: rgb(229 229 229 / 0.8);
+  padding: 0.12em 0.36em;
+  color: rgb(23 23 23);
+  font-weight: 500;
+}
+
+.note-prose :not(pre) > code::before,
+.note-prose :not(pre) > code::after {
+  content: none;
+}
+
 /* Code blocks preserve source spacing intent. If the markdown has text directly
    beside a fenced block, hug it; if there is a blank source line, let it breathe.
    Neighbouring margins are adjusted too because adjacent vertical margins
    collapse to the larger value. */
-.note-prose pre:has(> code.note-code--tight-before) {
+.note-prose pre.note-code--tight-before {
   margin-top: var(--code-tight-gap);
 }
 
-.note-prose :where(p, ul, ol, blockquote, pre):has(+ pre > code.note-code--tight-before) {
+.note-prose :where(p, ul, ol, blockquote, pre):has(+ pre.note-code--tight-before) {
   margin-bottom: var(--code-tight-gap);
 }
 
-.note-prose pre:has(> code.note-code--tight-after) {
+.note-prose pre.note-code--tight-after {
   margin-bottom: var(--code-tight-gap);
 }
 
-.note-prose pre:has(> code.note-code--tight-after) + :where(p, ul, ol, blockquote, pre) {
+.note-prose pre.note-code--tight-after + :where(p, ul, ol, blockquote, pre) {
   margin-top: var(--code-tight-gap);
 }
 
-.note-prose pre:has(> code.note-code--loose-before) {
+.note-prose pre.note-code--loose-before {
   margin-top: var(--code-loose-gap);
 }
 
-.note-prose :where(p, ul, ol, blockquote, pre):has(+ pre > code.note-code--loose-before) {
+.note-prose :where(p, ul, ol, blockquote, pre):has(+ pre.note-code--loose-before) {
   margin-bottom: var(--code-loose-gap);
 }
 
-.note-prose pre:has(> code.note-code--loose-after) {
+.note-prose pre.note-code--loose-after {
   margin-bottom: var(--code-loose-gap);
 }
 
-.note-prose pre:has(> code.note-code--loose-after) + :where(p, ul, ol, blockquote, pre) {
+.note-prose pre.note-code--loose-after + :where(p, ul, ol, blockquote, pre) {
   margin-top: var(--code-loose-gap);
 }
 
