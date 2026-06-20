@@ -33,6 +33,8 @@
    headings and $$ math blocks at their normal size. */
 .note-prose {
   --para-gap: 2em;
+  --code-tight-gap: 0.45em;
+  --code-loose-gap: 1.6em;
   --formula-gap: 0.5em;
   --header-top-gap: 2em;
   --header-bottom-gap: 0.3em;
@@ -42,6 +44,42 @@
 .note-prose ul + p,
 .note-prose ol + p {
   margin-top: var(--para-gap);
+}
+
+/* Code blocks preserve source spacing intent. If the markdown has text directly
+   beside a fenced block, hug it; if there is a blank source line, let it breathe.
+   Neighbouring margins are adjusted too because adjacent vertical margins
+   collapse to the larger value. */
+.note-prose pre:has(> code.note-code--tight-before) {
+  margin-top: var(--code-tight-gap);
+}
+
+.note-prose :where(p, ul, ol, blockquote, pre):has(+ pre > code.note-code--tight-before) {
+  margin-bottom: var(--code-tight-gap);
+}
+
+.note-prose pre:has(> code.note-code--tight-after) {
+  margin-bottom: var(--code-tight-gap);
+}
+
+.note-prose pre:has(> code.note-code--tight-after) + :where(p, ul, ol, blockquote, pre) {
+  margin-top: var(--code-tight-gap);
+}
+
+.note-prose pre:has(> code.note-code--loose-before) {
+  margin-top: var(--code-loose-gap);
+}
+
+.note-prose :where(p, ul, ol, blockquote, pre):has(+ pre > code.note-code--loose-before) {
+  margin-bottom: var(--code-loose-gap);
+}
+
+.note-prose pre:has(> code.note-code--loose-after) {
+  margin-bottom: var(--code-loose-gap);
+}
+
+.note-prose pre:has(> code.note-code--loose-after) + :where(p, ul, ol, blockquote, pre) {
+  margin-top: var(--code-loose-gap);
 }
 
 /* Tighten the space in front of and behind display ($$) formulas. Both the

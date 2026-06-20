@@ -61,6 +61,30 @@ function getAssetUrl(src, notePath) {
   return new URL(src, baseUrl).toString();
 }
 
+function hasBlankMarkdownLine(markdownLines, lineNumber) {
+  const line = markdownLines[lineNumber - 1];
+
+  return typeof line === 'string' && line.trim() === '';
+}
+
+function getCodeBlockSpacingClass(node, markdownLines) {
+  const startLine = node?.position?.start?.line;
+  const endLine = node?.position?.end?.line;
+
+  if (!startLine || !endLine) {
+    return '';
+  }
+
+  return [
+    hasBlankMarkdownLine(markdownLines, startLine - 1)
+      ? 'note-code--loose-before'
+      : 'note-code--tight-before',
+    hasBlankMarkdownLine(markdownLines, endLine + 1)
+      ? 'note-code--loose-after'
+      : 'note-code--tight-after',
+  ].join(' ');
+}
+
 function TreeNode({ node, selectedSlug, expandedFolders, onToggleFolder, registerSelected }) {
   if (node.type === 'folder') {
     const isExpanded = expandedFolders.has(node.path);
@@ -165,6 +189,7 @@ export default function Notes() {
   const selectedLinkRef = useRef(null);
   const pillRef = useRef(null);
   const prevSlugRef = useRef(null);
+  const markdownLines = useMemo(() => markdown.split(/\r?\n/), [markdown]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -414,6 +439,21 @@ export default function Notes() {
                 remarkPlugins={[remarkMath]}
                 rehypePlugins={[rehypeKatex, rehypeHighlight]}
                 components={{
+                  code: ({ node, className = '', children, ...props }) => {
+                    const spacingClass = getCodeBlockSpacingClass(
+                      node,
+                      markdownLines,
+                    );
+
+                    return (
+                      <code
+                        className={[className, spacingClass].filter(Boolean).join(' ')}
+                        {...props}
+                      >
+                        {children}
+                      </code>
+                    );
+                  },
                   img: ({ src = '', alt = '' }) => (
                     <img
                       src={getAssetUrl(src, selectedNote.path)}
