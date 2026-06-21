@@ -61,6 +61,55 @@ function getAssetUrl(src, notePath) {
   return new URL(src, baseUrl).toString();
 }
 
+function splitMarkdownHref(href) {
+  const match = href.match(/^([^?#]*)(\?[^#]*)?(#.*)?$/);
+
+  return {
+    path: match?.[1] || '',
+    query: match?.[2] || '',
+    hash: match?.[3] || '',
+  };
+}
+
+function normalizeNotePath(notePath) {
+  const segments = [];
+
+  decodeURIComponent(notePath)
+    .split('/')
+    .forEach((segment) => {
+      if (!segment || segment === '.') {
+        return;
+      }
+
+      if (segment === '..') {
+        segments.pop();
+        return;
+      }
+
+      segments.push(segment);
+    });
+
+  return segments.join('/');
+}
+
+function getMarkdownNoteLink(href, notePath) {
+  if (!href || /^(?:[a-z][a-z\d+.-]*:|\/\/|#|\/)/i.test(href)) {
+    return null;
+  }
+
+  const { path: hrefPath, query, hash } = splitMarkdownHref(href);
+
+  if (!hrefPath.toLowerCase().endsWith('.md')) {
+    return null;
+  }
+
+  const noteFolder = notePath.split('/').slice(0, -1).join('/');
+  const targetPath = normalizeNotePath(`${noteFolder}/${hrefPath}`);
+  const slug = targetPath.replace(/\.md$/i, '');
+
+  return `${NOTES_BASE_URL}/${encodePath(slug)}${query}${hash}`;
+}
+
 function hasBlankMarkdownLine(markdownLines, lineNumber) {
   const line = markdownLines[lineNumber - 1];
 
@@ -461,6 +510,31 @@ export default function Notes() {
                       loading="lazy"
                     />
                   ),
+                  a: (linkProps) => {
+                    const props = { ...linkProps };
+                    const href = props.href || '';
+                    const children = props.children;
+
+                    delete props.node;
+                    delete props.href;
+                    delete props.children;
+
+                    const noteLink = getMarkdownNoteLink(href, selectedNote.path);
+
+                    if (noteLink) {
+                      return (
+                        <Link to={noteLink} {...props}>
+                          {children}
+                        </Link>
+                      );
+                    }
+
+                    return (
+                      <a href={href} {...props}>
+                        {children}
+                      </a>
+                    );
+                  },
                 }}
               >
                 {markdown}
