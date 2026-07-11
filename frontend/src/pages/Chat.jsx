@@ -8,8 +8,31 @@ const STARTER_PROMPTS = [
   'What experience does Xia have with SLAM?',
 ];
 
-let idSeq = 0;
-const nextId = () => `m${idSeq++}`;
+const SESSION_MESSAGES_KEY = 'homepage-chat-messages';
+const SESSION_MODEL_KEY = 'homepage-chat-model';
+const MODELS = [
+  { value: 'gpt-5.6-sol', label: 'ChatGPT 5.6 Sol', shortLabel: 'ChatGPT 5.6 Sol', provider: 'OpenAI' },
+  { value: 'gpt-5.6-terra', label: 'ChatGPT 5.6 Terra', shortLabel: 'ChatGPT 5.6 Terra', provider: 'OpenAI' },
+  { value: 'gpt-5.6-luna', label: 'ChatGPT 5.6 Luna', shortLabel: 'ChatGPT 5.6 Luna', provider: 'OpenAI' },
+  { value: 'claude-opus-4-8', label: 'Claude Opus 4.8', shortLabel: 'Opus 4.8', provider: 'Anthropic' },
+  { value: 'claude-sonnet-5', label: 'Claude Sonnet 5', shortLabel: 'Sonnet 5', provider: 'Anthropic' },
+];
+
+const nextId = () => crypto.randomUUID();
+
+function loadSessionMessages() {
+  try {
+    const messages = JSON.parse(sessionStorage.getItem(SESSION_MESSAGES_KEY));
+    return Array.isArray(messages) ? messages : [];
+  } catch {
+    return [];
+  }
+}
+
+function loadSessionModel() {
+  const stored = sessionStorage.getItem(SESSION_MODEL_KEY);
+  return MODELS.some((model) => model.value === stored) ? stored : 'claude-opus-4-8';
+}
 
 // Drifting sine lines drawn on a canvas behind the chat.
 const waves = [
@@ -115,6 +138,11 @@ function Message({ message }) {
 
   return (
     <div className="flex flex-col gap-2">
+      {message.model && (
+        <span className="text-xs text-neutral-400">
+          {MODELS.find((model) => model.value === message.model)?.label}
+        </span>
+      )}
       {message.status && !message.content && (
         <div className="flex items-center gap-1.5 text-sm text-neutral-500">
           <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-sky-400 [animation-delay:-0.3s]" />
@@ -139,8 +167,107 @@ function Message({ message }) {
   );
 }
 
+function ModelPicker({ model, onChange, disabled }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const menuRef = useRef(null);
+  const selected = MODELS.find((option) => option.value === model);
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    function closeMenu(event) {
+      if (!menuRef.current?.contains(event.target)) setIsOpen(false);
+    }
+
+    function closeOnEscape(event) {
+      if (event.key === 'Escape') setIsOpen(false);
+    }
+
+    document.addEventListener('pointerdown', closeMenu);
+    document.addEventListener('keydown', closeOnEscape);
+    return () => {
+      document.removeEventListener('pointerdown', closeMenu);
+      document.removeEventListener('keydown', closeOnEscape);
+    };
+  }, [isOpen]);
+
+  return (
+    <div ref={menuRef} className="relative shrink-0">
+      <button
+        type="button"
+        onClick={() => setIsOpen((open) => !open)}
+        disabled={disabled}
+        aria-haspopup="listbox"
+        aria-expanded={isOpen}
+        className="flex h-9 min-w-28 items-center justify-between gap-2 rounded-xl border border-neutral-200 bg-neutral-50 px-3 text-xs font-medium text-neutral-700 shadow-sm transition hover:border-neutral-300 hover:bg-neutral-100 focus:outline-none focus:ring-2 focus:ring-sky-200 disabled:cursor-not-allowed disabled:opacity-50"
+      >
+        <span className="flex items-center gap-2">
+          <span
+            className={`h-2 w-2 rounded-full ${
+              selected?.provider === 'OpenAI' ? 'bg-emerald-500' : 'bg-orange-400'
+            }`}
+          />
+          <span key={model} className="animate-page-in motion-reduce:animate-none">
+            {selected?.shortLabel}
+          </span>
+        </span>
+        <svg
+          viewBox="0 0 16 16"
+          aria-hidden="true"
+          className={`h-3.5 w-3.5 text-neutral-400 transition-transform duration-200 motion-reduce:transition-none ${
+            isOpen ? 'rotate-180' : ''
+          }`}
+        >
+          <path d="m4 6 4 4 4-4" fill="none" stroke="currentColor" strokeWidth="1.5" />
+        </svg>
+      </button>
+
+      <div
+        role="listbox"
+        aria-label="Model"
+        aria-hidden={!isOpen}
+        className={`absolute bottom-full right-0 z-30 mb-2 w-56 origin-bottom-right rounded-2xl border border-neutral-200 bg-white p-1.5 shadow-[0_18px_50px_rgba(0,0,0,0.14)] transition-[opacity,transform] motion-reduce:transition-none ${
+          isOpen
+            ? 'pointer-events-auto translate-y-0 scale-100 opacity-100 duration-200 ease-[cubic-bezier(0.16,1,0.3,1)]'
+            : 'pointer-events-none translate-y-2 scale-[0.96] opacity-0 duration-150 ease-in'
+        }`}
+      >
+        {['OpenAI', 'Anthropic'].map((provider) => (
+          <div key={provider}>
+            <p className="px-3 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-wider text-neutral-400">
+              {provider}
+            </p>
+            {MODELS.filter((option) => option.provider === provider).map((option) => (
+              <button
+                key={option.value}
+                type="button"
+                role="option"
+                tabIndex={isOpen ? 0 : -1}
+                aria-selected={option.value === model}
+                onClick={() => {
+                  onChange(option.value);
+                  setIsOpen(false);
+                }}
+                className={`flex w-full items-center justify-between rounded-xl px-3 py-2 text-left text-sm transition-colors ${
+                  option.value === model
+                    ? 'bg-sky-50 font-medium text-sky-700'
+                    : 'text-neutral-700 hover:bg-neutral-100'
+                }`}
+              >
+                {option.label}
+                {option.value === model && <span aria-hidden="true">✓</span>}
+              </button>
+            ))}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export default function Chat() {
-  const [messages, setMessages] = useState([]);
+  const [messages, setMessages] = useState(loadSessionMessages);
+  const [model, setModel] = useState(loadSessionModel);
   const [input, setInput] = useState('');
   const [isStreaming, setIsStreaming] = useState(false);
   const [error, setError] = useState('');
@@ -149,7 +276,12 @@ export default function Chat() {
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+    sessionStorage.setItem(SESSION_MESSAGES_KEY, JSON.stringify(messages));
   }, [messages]);
+
+  useEffect(() => {
+    sessionStorage.setItem(SESSION_MODEL_KEY, model);
+  }, [model]);
 
   function updateAssistant(id, updater) {
     setMessages((prev) =>
@@ -169,7 +301,14 @@ export default function Chat() {
 
     setMessages([
       ...history,
-      { id: assistantId, role: 'assistant', content: '', status: '', citations: [] },
+      {
+        id: assistantId,
+        role: 'assistant',
+        model,
+        content: '',
+        status: '',
+        citations: [],
+      },
     ]);
     setIsStreaming(true);
 
@@ -180,6 +319,7 @@ export default function Chat() {
       const payload = history.map(({ role, content }) => ({ role, content }));
       for await (const event of streamChat({
         messages: payload,
+        model,
         signal: controller.signal,
       })) {
         if (event.type === 'status') {
@@ -226,7 +366,7 @@ export default function Chat() {
           {isEmpty ? (
             <div className="flex min-h-[calc(100vh-16rem)] flex-col items-center justify-center text-center">
               <h1 className="text-3xl font-semibold tracking-tight">
-                Ask my AI replica
+                Ask my AI agent
               </h1>
               <p className="mt-3 max-w-md text-neutral-500">
                 Grounded in Xia&apos;s notes and projects. Ask about the work,
@@ -272,6 +412,7 @@ export default function Chat() {
               placeholder="Ask anything about Xia's work…"
               className="max-h-40 flex-1 resize-none bg-transparent py-1.5 text-[15px] text-neutral-900 placeholder:text-neutral-400 focus:outline-none"
             />
+            <ModelPicker model={model} onChange={setModel} disabled={isStreaming} />
             {isStreaming ? (
               <button
                 type="button"
@@ -292,8 +433,7 @@ export default function Chat() {
             )}
           </div>
           <p className="mt-2 text-center text-xs text-neutral-400">
-            Replica may be wrong; check the cited notes. Connected to a stub
-            backend — no AI yet.
+            Agent may be wrong; check the cited notes.
           </p>
         </div>
       </div>

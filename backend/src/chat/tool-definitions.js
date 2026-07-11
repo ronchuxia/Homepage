@@ -1,5 +1,5 @@
-// The Claude-facing tool definitions (name, description, input schema) the chat
-// agent exposes. The runtime implementations live in ./tools/; this file is just
+// The provider-facing tool definitions (name, description, input schema) the chat
+// agent exposes. The runtime implementations live in ../tools/; this file is just
 // the schemas passed to the model.
 
 export const TOOLS = [

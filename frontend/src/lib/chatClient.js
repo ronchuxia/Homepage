@@ -1,6 +1,6 @@
 // Chat transport. Defines the contract between the chat UI and the backend.
 //
-// Request:  POST { messages: [{ role, content }], sourceScope }
+// Request:  POST { messages: [{ role, content }], model, sourceScope }
 // Response: a stream of events (SSE `data: {json}` from the real backend),
 //           each one of:
 //             { type: 'status',    text }            retrieval/progress note
@@ -14,7 +14,7 @@
 
 const API_URL = import.meta.env.VITE_CHAT_API_URL;
 
-export async function* streamChat({ messages, sourceScope = 'all', signal }) {
+export async function* streamChat({ messages, model, sourceScope = 'all', signal }) {
   if (!API_URL) {
     yield* mockStream({ messages, signal });
     return;
@@ -23,7 +23,7 @@ export async function* streamChat({ messages, sourceScope = 'all', signal }) {
   const response = await fetch(API_URL, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ messages, sourceScope }),
+    body: JSON.stringify({ messages, model, sourceScope }),
     signal,
   });
 
@@ -84,7 +84,7 @@ async function* mockStream({ messages, signal }) {
   await delay(600, signal);
 
   const answer =
-    `This is a placeholder reply. The real assistant will search Xia's notes ` +
+    `This is a placeholder reply. The real agent will search Xia's notes ` +
     `and projects to answer your question, then respond with citations. ` +
     `Streaming and the source links below are wired up — the backend just ` +
     `isn't connected yet.\n\nYou asked: "${question}"`;

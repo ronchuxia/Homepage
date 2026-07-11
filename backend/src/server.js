@@ -14,7 +14,7 @@
 // driven by a Lambda streaming handler without changes.
 
 import { createServer } from 'node:http';
-import { runChat } from './chat.js';
+import { runChat } from './chat/index.js';
 import { listSources } from './tools/list-sources.js';
 import { readFileWindow } from './tools/read-file.js';
 import { searchCorpus } from './tools/search-corpus.js';

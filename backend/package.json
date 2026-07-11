@@ -3,13 +3,14 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "description": "Chat backend for the homepage AI replica. Phase 1: a stub /chat that streams the SSE contract with no AI yet.",
+  "description": "Multi-provider chat backend for the homepage AI agent.",
   "scripts": {
     "dev": "node --watch --env-file-if-exists=.env.local src/server.js",
     "start": "node --env-file-if-exists=.env.local src/server.js",
     "seed": "node scripts/seed-corpus.mjs"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.106.0"
+    "@anthropic-ai/sdk": "^0.106.0",
+    "openai": "^6.46.0"
   }
 }
