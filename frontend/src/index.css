@@ -2,6 +2,12 @@
 @tailwind components;
 @tailwind utilities;
 
+.chat-prose .katex-display {
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 0.2em 0;
+}
+
 /* Notes reader spacing. Scoped to `.note-prose` (the notes article) so the
    Canvas / blind-spot prose keeps default spacing. */
 

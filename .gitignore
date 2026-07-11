@@ -4,6 +4,7 @@ notes
 docs/
 CLAUDE.md
 AGENTS.md
+TODO.md
 config.env
 
 # dependencies & build output

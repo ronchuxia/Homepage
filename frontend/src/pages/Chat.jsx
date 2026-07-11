@@ -1,4 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import remarkMath from 'remark-math';
+import rehypeKatex from 'rehype-katex';
 import { Link } from 'react-router-dom';
 import { streamChat } from '../lib/chatClient';
 
@@ -19,6 +23,35 @@ const MODELS = [
 ];
 
 const nextId = () => crypto.randomUUID();
+
+function normalizeMathDelimiters(markdown) {
+  const codePattern = /(```[\s\S]*?```|~~~[\s\S]*?~~~|`[^`\n]*`)/g;
+
+  return markdown
+    .split(codePattern)
+    .map((segment, index) => {
+      if (index % 2 === 1) return segment;
+
+      return segment
+        .replace(
+          /\\\[([\s\S]*?)\\\]/g,
+          (_, equation) => `\n\n$$\n${equation.trim()}\n$$\n\n`,
+        )
+        .replace(/\\\((.*?)\\\)/g, (_, equation) => `$${equation}$`);
+    })
+    .join('');
+}
+
+function MarkdownTable(tableProps) {
+  const props = { ...tableProps };
+  delete props.node;
+
+  return (
+    <div className="my-5 overflow-x-auto rounded-lg border border-neutral-200">
+      <table className="my-0 min-w-full" {...props} />
+    </div>
+  );
+}
 
 function loadSessionMessages() {
   try {
@@ -152,9 +185,15 @@ function Message({ message }) {
         </div>
       )}
       {message.content && (
-        <div className="whitespace-pre-wrap text-[15px] leading-relaxed text-neutral-900">
-          {message.content}
-        </div>
+        <article className="chat-prose prose prose-neutral max-w-none text-[15px] leading-relaxed prose-headings:tracking-tight prose-p:my-2 prose-p:first:mt-0 prose-p:last:mb-0 prose-li:my-0.5 prose-a:text-sky-700 prose-a:no-underline hover:prose-a:underline prose-pre:rounded-lg prose-pre:border prose-pre:border-neutral-200 prose-pre:bg-neutral-950 prose-pre:text-neutral-50">
+          <ReactMarkdown
+            remarkPlugins={[remarkGfm, remarkMath]}
+            rehypePlugins={[rehypeKatex]}
+            components={{ table: MarkdownTable }}
+          >
+            {normalizeMathDelimiters(message.content)}
+          </ReactMarkdown>
+        </article>
       )}
       {message.citations?.length > 0 && (
         <div className="flex flex-wrap gap-2 pt-1">
