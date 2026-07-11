@@ -54,8 +54,9 @@
 
 /* Inline code is styled separately from fenced code blocks. Tailwind
    Typography adds decorative backticks by default, so remove those and give
-   single-backtick code a compact inline treatment. */
-.note-prose :not(pre) > code {
+   code spans a compact inline treatment. */
+.note-prose :not(pre) > code,
+.chat-prose :not(pre) > code {
   border-radius: 0.25rem;
   background: rgb(229 229 229 / 0.8);
   padding: 0.12em 0.36em;
@@ -64,7 +65,9 @@
 }
 
 .note-prose :not(pre) > code::before,
-.note-prose :not(pre) > code::after {
+.note-prose :not(pre) > code::after,
+.chat-prose :not(pre) > code::before,
+.chat-prose :not(pre) > code::after {
   content: none;
 }
 
