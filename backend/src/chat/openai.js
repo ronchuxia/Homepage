@@ -17,6 +17,7 @@ export async function* runOpenAI({ messages }, signal, model, runtime) {
   const client = new OpenAI();
   const conversation = messages.map(({ role, content }) => ({ role, content }));
   const cite = { read: new Map(), search: new Map() };
+  let exhaustedToolRounds = false;
 
   for (let round = 0; round < runtime.maxToolRounds; round += 1) {
     const stream = await client.responses.create(
@@ -68,6 +69,39 @@ export async function* runOpenAI({ messages }, signal, model, runtime) {
       });
     }
     conversation.push(...toolResults);
+    exhaustedToolRounds = round === runtime.maxToolRounds - 1;
+  }
+
+  if (exhaustedToolRounds) {
+    const stream = await client.responses.create(
+      {
+        model,
+        instructions: SYSTEM_PROMPT,
+        input: conversation,
+        max_output_tokens: runtime.maxTokens,
+        tools: OPENAI_TOOLS,
+        tool_choice: 'none',
+        reasoning: { effort: EFFORT },
+        store: false,
+        stream: true,
+        include: ['reasoning.encrypted_content'],
+      },
+      { signal },
+    );
+
+    let completed = false;
+    for await (const event of stream) {
+      if (event.type === 'response.output_text.delta') {
+        yield { type: 'token', text: event.delta };
+      }
+      if (event.type === 'response.completed') {
+        completed = true;
+      }
+    }
+
+    if (!completed) {
+      throw new Error('OpenAI final response stream ended before completion.');
+    }
   }
 
   yield* runtime.finishWithCitations(cite);

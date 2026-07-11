@@ -9,6 +9,7 @@ export async function* runAnthropic({ messages }, signal, model, runtime) {
   const client = new Anthropic();
   const conversation = messages.map(({ role, content }) => ({ role, content }));
   const cite = { read: new Map(), search: new Map() };
+  let exhaustedToolRounds = false;
 
   for (let round = 0; round < runtime.maxToolRounds; round += 1) {
     const stream = client.messages.stream(
@@ -52,6 +53,34 @@ export async function* runAnthropic({ messages }, signal, model, runtime) {
       });
     }
     conversation.push({ role: 'user', content: toolResults });
+    exhaustedToolRounds = round === runtime.maxToolRounds - 1;
+  }
+
+  if (exhaustedToolRounds) {
+    const stream = client.messages.stream(
+      {
+        model,
+        system: SYSTEM_PROMPT,
+        messages: conversation,
+        max_tokens: runtime.maxTokens,
+        tools: TOOLS,
+        tool_choice: { type: 'none' },
+        thinking: { type: 'adaptive' },
+        output_config: { effort: EFFORT },
+      },
+      { signal },
+    );
+
+    for await (const event of stream) {
+      if (
+        event.type === 'content_block_delta' &&
+        event.delta.type === 'text_delta'
+      ) {
+        yield { type: 'token', text: event.delta.text };
+      }
+    }
+
+    await stream.finalMessage();
   }
 
   yield* runtime.finishWithCitations(cite);
