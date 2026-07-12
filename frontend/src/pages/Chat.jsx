@@ -322,6 +322,10 @@ export default function Chat() {
     sessionStorage.setItem(SESSION_MODEL_KEY, model);
   }, [model]);
 
+  useEffect(() => {
+    return () => abortRef.current?.abort();
+  }, []);
+
   function updateAssistant(id, updater) {
     setMessages((prev) =>
       prev.map((m) => (m.id === id ? { ...m, ...updater(m) } : m)),

@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom'
+import { BrowserRouter as Router, Navigate, Routes, Route, useLocation } from 'react-router-dom'
 import Navbar from './components/Navbar'
 import Chat from './pages/Chat'
 import Notes from './pages/Notes'
@@ -13,7 +13,7 @@ function AnimatedRoutes() {
   return (
     <div key={pageKey} className="animate-page-in motion-reduce:animate-none">
       <Routes location={location}>
-        <Route path="/" element={<Chat />} />
+        <Route path="/" element={<Navigate to="/chat" replace />} />
         <Route path="/chat" element={<Chat />} />
         <Route path="/notes/*" element={<Notes />} />
         <Route path="/canvas/*" element={<Canvas />} />

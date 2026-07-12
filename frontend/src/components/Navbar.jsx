@@ -63,7 +63,7 @@ export default function Navbar() {
         <div className="flex justify-between items-center h-16">
           {/* Logo/Name */}
           <Link
-            to="/"
+            to="/chat"
             className="text-xl font-bold tracking-tight text-neutral-900 transition-colors hover:text-sky-700"
           >
             Xia Chu
