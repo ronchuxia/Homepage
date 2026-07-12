@@ -98,11 +98,13 @@ async function* mockStream({ messages, signal }) {
     type: 'citations',
     citations: [
       {
+        source: '16-663 F1Tenth Autonomous Racing',
         title: 'Scan Matching',
         type: 'note',
         url: '/notes/16-663 F1Tenth Autonomous Racing/4 Scan Matching',
       },
       {
+        source: '16-663 F1Tenth Autonomous Racing',
         title: 'Particle Filter',
         type: 'note',
         url: '/notes/16-663 F1Tenth Autonomous Racing/6 Particle Filter',

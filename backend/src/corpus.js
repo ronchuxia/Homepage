@@ -109,15 +109,17 @@ export function buildCitation(relPath, sources, range = {}) {
   const name = relPath.split('/').pop();
 
   if (!source) {
-    return { title: name, type: 'file', url: null, path: relPath };
+    return { source: null, title: name, type: 'file', url: null, path: relPath };
   }
 
   const rule = source.citation;
 
   if (rule.kind === 'notes-slug') {
     const slug = relPath.slice(source.root.length + 1).replace(/\.md$/, '');
+    const parts = slug.split('/');
     return {
-      title: slug.split('/').pop(),
+      source: parts.length > 1 ? parts[0] : 'Notes',
+      title: parts.at(-1),
       type: 'note',
       url: `${rule.base}${slug}`,
       path: relPath,
@@ -134,6 +136,7 @@ export function buildCitation(relPath, sources, range = {}) {
           : `#L${range.startLine}`;
     }
     return {
+      source: rule.repo.split('/').at(-1),
       title: sub,
       type: 'code',
       url: `https://github.com/${rule.repo}/blob/${rule.sha}/${sub}${fragment}`,
@@ -141,5 +144,5 @@ export function buildCitation(relPath, sources, range = {}) {
     };
   }
 
-  return { title: name, type: source.type, url: null, path: relPath };
+  return { source: source.id, title: name, type: source.type, url: null, path: relPath };
 }

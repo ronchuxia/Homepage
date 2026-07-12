@@ -147,21 +147,57 @@ function WavyBackground({ faded }) {
   );
 }
 
+function CitationIcon({ type }) {
+  if (type === 'code') {
+    return (
+      <svg aria-hidden="true" viewBox="0 0 24 24" className="h-3.5 w-3.5 shrink-0 fill-current">
+        <path d="M12 .7a12 12 0 0 0-3.8 23.4c.6.1.8-.3.8-.6v-2.1c-3.3.7-4-1.4-4-1.4-.5-1.4-1.3-1.8-1.3-1.8-1.1-.7.1-.7.1-.7 1.2.1 1.8 1.2 1.8 1.2 1.1 1.8 2.8 1.3 3.5 1 .1-.8.4-1.3.8-1.6-2.7-.3-5.5-1.3-5.5-5.9 0-1.3.5-2.4 1.2-3.2-.1-.3-.5-1.5.1-3.2 0 0 1-.3 3.3 1.2a11.4 11.4 0 0 1 6 0c2.3-1.5 3.3-1.2 3.3-1.2.7 1.7.3 2.9.1 3.2.8.8 1.2 1.9 1.2 3.2 0 4.6-2.8 5.6-5.5 5.9.4.4.8 1.1.8 2.2v3.2c0 .3.2.7.8.6A12 12 0 0 0 12 .7Z" />
+      </svg>
+    );
+  }
+
+  if (type === 'note') {
+    return (
+      <svg aria-hidden="true" viewBox="0 0 24 24" className="h-3.5 w-3.5 shrink-0 fill-none stroke-current" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <rect x="3" y="5" width="18" height="14" rx="2" />
+        <path d="M6.5 15v-6l2.5 3 2.5-3v6M14 12h3.5m-1.75-1.75L17.5 12l-1.75 1.75" />
+      </svg>
+    );
+  }
+
+  return (
+    <svg aria-hidden="true" viewBox="0 0 24 24" className="h-3.5 w-3.5 shrink-0 fill-none stroke-current" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M6 3h8l4 4v14H6z" />
+      <path d="M14 3v5h4M9 13h6M9 17h6" />
+    </svg>
+  );
+}
+
 function Citation({ citation }) {
   const isInternal = citation.url?.startsWith('/');
   const className =
     'inline-flex items-center gap-1 rounded-full border border-neutral-300 bg-white px-2.5 py-1 text-xs text-neutral-600 transition-colors hover:border-sky-300 hover:text-sky-700';
+  const label = (
+    <>
+      <CitationIcon type={citation.type} />
+      {citation.source && (
+        <span className="text-neutral-400">{citation.source}</span>
+      )}
+      {citation.source && <span aria-hidden="true">·</span>}
+      {citation.title}
+    </>
+  );
 
   if (isInternal) {
     return (
       <Link to={citation.url} className={className}>
-        {citation.title}
+        {label}
       </Link>
     );
   }
   return (
     <a href={citation.url} target="_blank" rel="noopener noreferrer" className={className}>
-      {citation.title}
+      {label}
     </a>
   );
 }

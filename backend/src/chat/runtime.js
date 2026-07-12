@@ -70,6 +70,7 @@ async function runTool(block, cite) {
 function citationsFrom(cite) {
   const sources = cite.read.size ? [...cite.read.values()] : [...cite.search.values()];
   return sources.slice(0, 6).map((citation) => ({
+    source: citation.source,
     title: citation.title,
     type: citation.type,
     url: citation.url,
