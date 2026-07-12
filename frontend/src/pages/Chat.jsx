@@ -67,6 +67,14 @@ function loadSessionModel() {
   return MODELS.some((model) => model.value === stored) ? stored : 'claude-opus-4-8';
 }
 
+function markResponseStopped(messages, assistantId) {
+  return messages.map((message) =>
+    message.id === assistantId
+      ? { ...message, status: '', citations: [], stopped: true }
+      : message,
+  );
+}
+
 // Drifting sine lines drawn on a canvas behind the chat.
 const waves = [
   { color: '124, 122, 232', width: 2.5, alpha: 0.75, seed: 0.0, fa: 0.31, fk: 0.13, fp: 0.6 },
@@ -195,6 +203,9 @@ function Message({ message }) {
           </ReactMarkdown>
         </article>
       )}
+      {message.stopped && (
+        <p className="text-sm text-neutral-500">Response stopped.</p>
+      )}
       {message.citations?.length > 0 && (
         <div className="flex flex-wrap gap-2 pt-1">
           {message.citations.map((c) => (
@@ -311,7 +322,10 @@ export default function Chat() {
   const [isStreaming, setIsStreaming] = useState(false);
   const [error, setError] = useState('');
   const abortRef = useRef(null);
+  const activeAssistantIdRef = useRef(null);
   const bottomRef = useRef(null);
+  const messagesRef = useRef(messages);
+  messagesRef.current = messages;
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -323,7 +337,16 @@ export default function Chat() {
   }, [model]);
 
   useEffect(() => {
-    return () => abortRef.current?.abort();
+    return () => {
+      const controller = abortRef.current;
+      const assistantId = activeAssistantIdRef.current;
+      if (!controller || controller.signal.aborted || !assistantId) return;
+
+      const stoppedMessages = markResponseStopped(messagesRef.current, assistantId);
+      messagesRef.current = stoppedMessages;
+      sessionStorage.setItem(SESSION_MESSAGES_KEY, JSON.stringify(stoppedMessages));
+      controller.abort();
+    };
   }, []);
 
   function updateAssistant(id, updater) {
@@ -357,6 +380,7 @@ export default function Chat() {
 
     const controller = new AbortController();
     abortRef.current = controller;
+    activeAssistantIdRef.current = assistantId;
 
     try {
       const payload = history.map(({ role, content }) => ({ role, content }));
@@ -365,6 +389,8 @@ export default function Chat() {
         model,
         signal: controller.signal,
       })) {
+        if (controller.signal.aborted) break;
+
         if (event.type === 'status') {
           updateAssistant(assistantId, () => ({ status: event.text }));
         } else if (event.type === 'token') {
@@ -385,6 +411,7 @@ export default function Chat() {
     } finally {
       setIsStreaming(false);
       abortRef.current = null;
+      activeAssistantIdRef.current = null;
     }
   }
 
@@ -396,6 +423,10 @@ export default function Chat() {
   }
 
   function stop() {
+    const assistantId = activeAssistantIdRef.current;
+    if (assistantId) {
+      setMessages((current) => markResponseStopped(current, assistantId));
+    }
     abortRef.current?.abort();
   }
 
