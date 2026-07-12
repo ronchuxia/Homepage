@@ -409,9 +409,11 @@ export default function Chat() {
         setError(err.message || 'Something went wrong.');
       }
     } finally {
-      setIsStreaming(false);
-      abortRef.current = null;
-      activeAssistantIdRef.current = null;
+      if (abortRef.current === controller) {
+        setIsStreaming(false);
+        abortRef.current = null;
+        activeAssistantIdRef.current = null;
+      }
     }
   }
 
@@ -430,6 +432,20 @@ export default function Chat() {
     abortRef.current?.abort();
   }
 
+  function startNewChat() {
+    const controller = abortRef.current;
+    abortRef.current = null;
+    activeAssistantIdRef.current = null;
+    controller?.abort();
+
+    messagesRef.current = [];
+    setMessages([]);
+    setInput('');
+    setError('');
+    setIsStreaming(false);
+    sessionStorage.removeItem(SESSION_MESSAGES_KEY);
+  }
+
   const isEmpty = messages.length === 0;
 
   return (
@@ -438,7 +454,7 @@ export default function Chat() {
       <div className="relative z-10 flex-1 overflow-y-auto">
         <div className="mx-auto max-w-3xl px-6 py-8 sm:px-10">
           {isEmpty ? (
-            <div className="flex min-h-[calc(100vh-16rem)] flex-col items-center justify-center text-center">
+            <div className="flex min-h-[calc(100vh-16rem)] animate-fade-up flex-col items-center justify-center text-center motion-reduce:animate-none">
               <h1 className="text-3xl font-semibold tracking-tight">
                 Ask my AI agent
               </h1>
@@ -486,6 +502,27 @@ export default function Chat() {
               placeholder="Ask anything about Xia's work…"
               className="max-h-40 flex-1 resize-none bg-transparent py-1.5 text-[15px] text-neutral-900 placeholder:text-neutral-400 focus:outline-none"
             />
+            {!isEmpty && (
+              <button
+                type="button"
+                onClick={startNewChat}
+                aria-label="New chat"
+                title="New chat"
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-neutral-200 bg-neutral-50 text-neutral-500 shadow-sm transition-colors hover:border-neutral-300 hover:bg-neutral-100 hover:text-sky-700"
+              >
+                <svg
+                  viewBox="0 0 20 20"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  aria-hidden="true"
+                  className="h-4 w-4"
+                >
+                  <path d="M4.5 4.5h11a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H9l-4.5 2.5v-2.5a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2Z" />
+                  <path d="M10 7v6M7 10h6" />
+                </svg>
+              </button>
+            )}
             <ModelPicker model={model} onChange={setModel} disabled={isStreaming} />
             {isStreaming ? (
               <button
