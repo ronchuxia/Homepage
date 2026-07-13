@@ -9,6 +9,9 @@
 //             { type: 'done' }
 //             { type: 'error',     message }
 //
+// Transport failures (missing URL, unreachable backend, bad status, dropped
+// stream) throw; the caller catches and shows a generic message.
+//
 const API_URL = import.meta.env.VITE_CHAT_API_URL;
 
 export async function* streamChat({ messages, model, sourceScope = 'all', signal }) {
@@ -24,8 +27,7 @@ export async function* streamChat({ messages, model, sourceScope = 'all', signal
   });
 
   if (!response.ok || !response.body) {
-    yield { type: 'error', message: `Request failed (${response.status})` };
-    return;
+    throw new Error(`Request failed (${response.status})`);
   }
 
   const reader = response.body.getReader();
@@ -46,7 +48,7 @@ export async function* streamChat({ messages, model, sourceScope = 'all', signal
       try {
         yield JSON.parse(dataLine.slice(5).trim());
       } catch {
-        // ignore malformed frames
+        console.warn('Malformed frame:', frame);
       }
     }
   }

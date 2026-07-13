@@ -84,6 +84,7 @@ const server = createServer(async (req, res) => {
       }
     } catch (error) {
       if (!controller.signal.aborted) {
+        console.error('Backend failed:', error);
         send({ type: 'error', message: 'Backend failed.' });
       }
     } finally {

@@ -2,7 +2,8 @@
 //
 // runChat stays transport-agnostic — it only yields the contract events
 // (status / token / citations / done) and knows nothing about HTTP, SSE, or
-// Lambda. The server adapter delivers those events.
+// Lambda. Failures throw; the server adapter logs the cause and sanitizes
+// every throw into a generic error event.
 //
 // The selected model plans searches, reads passages, and writes a grounded answer.
 // Text deltas stream out as `token` events; tool calls surface as `status`
@@ -23,23 +24,17 @@ const MODEL_PROVIDERS = {
 export async function* runChat(payload = {}, signal) {
   const model = payload.model;
   if (!model) {
-    yield { type: 'error', message: 'Model is required.' };
-    yield { type: 'done' };
-    return;
+    throw new Error('Model is required.');
   }
 
   const provider = MODEL_PROVIDERS[model];
   if (!provider) {
-    yield { type: 'error', message: 'Model is invalid.' };
-    yield { type: 'done' };
-    return;
+    throw new Error(`Model is invalid: ${model}`);
   }
 
   const keyName = provider === 'openai' ? 'OPENAI_API_KEY' : 'ANTHROPIC_API_KEY';
   if (!process.env[keyName]) {
-    yield { type: 'error', message: 'Model is unavailable.' };
-    yield { type: 'done' };
-    return;
+    throw new Error(`Key is not set: ${keyName}`);
   }
   
   if (provider === 'openai') {

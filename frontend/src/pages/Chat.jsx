@@ -442,7 +442,8 @@ export default function Chat() {
       }
     } catch (err) {
       if (err.name !== 'AbortError') {
-        setError(err.message || 'Something went wrong.');
+        console.error('Connection failed:', err);
+        setError('Connection failed.');
       }
     } finally {
       if (abortRef.current === controller) {
