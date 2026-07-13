@@ -9,15 +9,11 @@
 //             { type: 'done' }
 //             { type: 'error',     message }
 //
-// Until VITE_CHAT_API_URL is set, a local mock simulates the stream so the UI
-// can be built and tested with no backend.
-
 const API_URL = import.meta.env.VITE_CHAT_API_URL;
 
 export async function* streamChat({ messages, model, sourceScope = 'all', signal }) {
   if (!API_URL) {
-    yield* mockStream({ messages, signal });
-    return;
+    throw new Error('Backend URL is required.');
   }
 
   const response = await fetch(API_URL, {
@@ -54,62 +50,4 @@ export async function* streamChat({ messages, model, sourceScope = 'all', signal
       }
     }
   }
-}
-
-// --- mock --------------------------------------------------------------------
-
-function delay(ms, signal) {
-  return new Promise((resolve, reject) => {
-    if (signal?.aborted) return reject(abortError());
-    const timer = setTimeout(resolve, ms);
-    signal?.addEventListener(
-      'abort',
-      () => {
-        clearTimeout(timer);
-        reject(abortError());
-      },
-      { once: true },
-    );
-  });
-}
-
-function abortError() {
-  return new DOMException('Aborted', 'AbortError');
-}
-
-async function* mockStream({ messages, signal }) {
-  const question = messages[messages.length - 1]?.content?.trim() ?? '';
-
-  yield { type: 'status', text: 'Searching notes…' };
-  await delay(600, signal);
-
-  const answer =
-    `This is a placeholder reply. The real agent will search Xia's notes ` +
-    `and projects to answer your question, then respond with citations. ` +
-    `Streaming and the source links below are wired up — the backend just ` +
-    `isn't connected yet.\n\nYou asked: "${question}"`;
-
-  for (const chunk of answer.match(/\S+\s*/g) ?? []) {
-    await delay(28, signal);
-    yield { type: 'token', text: chunk };
-  }
-
-  yield {
-    type: 'citations',
-    citations: [
-      {
-        source: '16-663 F1Tenth Autonomous Racing',
-        title: 'Scan Matching',
-        type: 'note',
-        url: '/notes/16-663 F1Tenth Autonomous Racing/4 Scan Matching',
-      },
-      {
-        source: '16-663 F1Tenth Autonomous Racing',
-        title: 'Particle Filter',
-        type: 'note',
-        url: '/notes/16-663 F1Tenth Autonomous Racing/6 Particle Filter',
-      },
-    ],
-  };
-  yield { type: 'done' };
 }
