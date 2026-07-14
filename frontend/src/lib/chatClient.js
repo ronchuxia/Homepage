@@ -1,6 +1,6 @@
 // Chat transport. Defines the contract between the chat UI and the backend.
 //
-// Request:  POST { messages: [{ role, content }], model, sourceScope }
+// Request:  POST { messages: [{ role, content }], model }
 // Response: a stream of events (SSE `data: {json}` from the real backend),
 //           each one of:
 //             { type: 'status',    text }            retrieval/progress note
@@ -14,7 +14,7 @@
 //
 const API_URL = import.meta.env.VITE_CHAT_API_URL;
 
-export async function* streamChat({ messages, model, sourceScope = 'all', signal }) {
+export async function* streamChat({ messages, model, signal }) {
   if (!API_URL) {
     throw new Error('Backend URL is required.');
   }
@@ -22,7 +22,7 @@ export async function* streamChat({ messages, model, sourceScope = 'all', signal
   const response = await fetch(API_URL, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ messages, model, sourceScope }),
+    body: JSON.stringify({ messages, model }),
     signal,
   });
 
