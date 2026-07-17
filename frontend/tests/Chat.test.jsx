@@ -100,6 +100,26 @@ test('shows tool status after streamed text until the answer resumes', async () 
   expect(screen.queryByText('Searching')).not.toBeInTheDocument();
 });
 
+test('clears tool status when the backend returns an error', async () => {
+  streamChat.mockImplementation(async function* emptyFinalAnswerStream() {
+    yield { type: 'token', text: 'First part.' };
+    yield { type: 'status', text: 'Searching' };
+    yield { type: 'error', message: 'Backend failed.' };
+  });
+  const user = userEvent.setup();
+  renderChat();
+
+  await user.type(
+    screen.getByPlaceholderText("Ask anything about Xia's work…"),
+    'Use too many tools',
+  );
+  await user.click(screen.getByRole('button', { name: 'Send' }));
+
+  expect(await screen.findByText('Backend failed.')).toBeInTheDocument();
+  expect(screen.getByText('First part.')).toBeInTheDocument();
+  expect(screen.queryByText('Searching')).not.toBeInTheDocument();
+});
+
 test('shows a generic error when the chat connection fails', async () => {
   const connectionError = new Error('private backend detail');
   streamChat.mockImplementation(async function* failedStream() {

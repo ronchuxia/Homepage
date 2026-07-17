@@ -1,6 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk';
 
-import { SYSTEM_PROMPT } from './system-prompt.js';
+import { FINAL_SYSTEM_PROMPT, SYSTEM_PROMPT } from './system-prompt.js';
 import { TOOLS } from './tool-definitions.js';
 
 const EFFORT = process.env.ANTHROPIC_EFFORT || 'medium';
@@ -86,7 +86,7 @@ export async function* runAnthropic({ messages }, signal, model, runtime) {
     const providerRound = runtime.maxToolRounds + 1;
     const request = {
       model,
-      system: SYSTEM_PROMPT,
+      system: FINAL_SYSTEM_PROMPT,
       messages: conversation,
       max_tokens: runtime.maxTokens,
       tools: TOOLS,
@@ -102,12 +102,14 @@ export async function* runAnthropic({ messages }, signal, model, runtime) {
       { modelRequest: request },
     );
     const stream = client.messages.stream(request, { signal });
+    let finalText = '';
 
     for await (const event of stream) {
       if (
         event.type === 'content_block_delta' &&
         event.delta.type === 'text_delta'
       ) {
+        finalText += event.delta.text;
         trace.appendSummaryAssistantResponse(event.delta.text);
         yield { type: 'token', text: event.delta.text };
       }
@@ -126,6 +128,9 @@ export async function* runAnthropic({ messages }, signal, model, runtime) {
       },
       { modelResponse: response.content },
     );
+    if (!finalText.trim()) {
+      throw new Error('Anthropic returned an empty final answer.');
+    }
   }
 
   yield* runtime.finishWithCitations(cite);

@@ -1,6 +1,6 @@
 import OpenAI from 'openai';
 
-import { SYSTEM_PROMPT } from './system-prompt.js';
+import { FINAL_SYSTEM_PROMPT, SYSTEM_PROMPT } from './system-prompt.js';
 import { TOOLS } from './tool-definitions.js';
 
 const EFFORT = process.env.OPENAI_REASONING_EFFORT || 'medium';
@@ -102,7 +102,7 @@ export async function* runOpenAI({ messages }, signal, model, runtime) {
     const providerRound = runtime.maxToolRounds + 1;
     const request = {
       model,
-      instructions: SYSTEM_PROMPT,
+      instructions: FINAL_SYSTEM_PROMPT,
       input: conversation,
       max_output_tokens: runtime.maxTokens,
       tools: OPENAI_TOOLS,
@@ -122,8 +122,10 @@ export async function* runOpenAI({ messages }, signal, model, runtime) {
     const stream = await client.responses.create(request, { signal });
 
     let response;
+    let finalText = '';
     for await (const event of stream) {
       if (event.type === 'response.output_text.delta') {
+        finalText += event.delta;
         trace.appendSummaryAssistantResponse(event.delta);
         yield { type: 'token', text: event.delta };
       }
@@ -147,6 +149,9 @@ export async function* runOpenAI({ messages }, signal, model, runtime) {
       },
       { modelResponse: response.output },
     );
+    if (!finalText.trim()) {
+      throw new Error('OpenAI returned an empty final answer.');
+    }
   }
 
   yield* runtime.finishWithCitations(cite);

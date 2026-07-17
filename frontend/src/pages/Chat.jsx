@@ -437,6 +437,7 @@ export default function Chat() {
         } else if (event.type === 'citations') {
           updateAssistant(assistantId, () => ({ citations: event.citations }));
         } else if (event.type === 'error') {
+          updateAssistant(assistantId, () => ({ status: '' }));
           setError(event.message);
         }
       }
