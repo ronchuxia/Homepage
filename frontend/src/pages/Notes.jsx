@@ -5,6 +5,7 @@ import remarkGfm from 'remark-gfm';
 import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
 import rehypeHighlight from 'rehype-highlight';
+import rehypeSlug from 'rehype-slug';
 
 const NOTES_BASE_URL = '/notes';
 const NOTES_INDEX_URL = `${NOTES_BASE_URL}/index.json`;
@@ -109,6 +110,45 @@ function getMarkdownNoteLink(href, notePath) {
   const slug = targetPath.replace(/\.md$/i, '');
 
   return `${NOTES_BASE_URL}/${encodePath(slug)}${query}${hash}`;
+}
+
+function getHashHeadingPath(hash) {
+  try {
+    const decodedHash = decodeURIComponent(hash.replace(/^#/, ''));
+    return decodedHash
+      .split('##')
+      .map((part) => part.trim().toLocaleLowerCase())
+      .filter(Boolean);
+  } catch {
+    return [];
+  }
+}
+
+function findHeadingByPath(headings, targetPath) {
+  const ancestors = [];
+
+  for (const heading of headings) {
+    const rank = Number(heading.tagName.slice(1));
+
+    while (ancestors.at(-1)?.rank >= rank) {
+      ancestors.pop();
+    }
+
+    const label = heading.textContent?.trim().toLocaleLowerCase() || '';
+    const currentPath = [...ancestors.map((item) => item.label), label];
+    const candidatePath = currentPath.slice(-targetPath.length);
+
+    if (
+      candidatePath.length === targetPath.length
+      && candidatePath.every((part, index) => part === targetPath[index])
+    ) {
+      return heading;
+    }
+
+    ancestors.push({ label, rank });
+  }
+
+  return null;
 }
 
 function hasBlankMarkdownLine(markdownLines, lineNumber) {
@@ -333,6 +373,35 @@ export default function Notes() {
     return () => controller.abort();
   }, [selectedNote]);
 
+  useEffect(() => {
+    if (status !== 'ready' || !location.hash) {
+      return;
+    }
+
+    const headingPath = getHashHeadingPath(location.hash);
+
+    if (headingPath.length === 0) {
+      return;
+    }
+
+    const decodedHash = decodeURIComponent(location.hash.slice(1));
+    const directTarget = document.getElementById(decodedHash);
+    const headings = Array.from(
+      document.querySelectorAll('.note-prose h1, .note-prose h2, .note-prose h3, .note-prose h4, .note-prose h5, .note-prose h6'),
+    );
+    const target = directTarget || findHeadingByPath(headings, headingPath);
+
+    if (!target) {
+      return;
+    }
+
+    const frame = requestAnimationFrame(() => {
+      target.scrollIntoView({ block: 'start' });
+    });
+
+    return () => cancelAnimationFrame(frame);
+  }, [location.hash, selectedNote, status]);
+
   function toggleFolder(path) {
     setExpandedFolders((currentFolders) => {
       const nextFolders = new Set(currentFolders);
@@ -498,7 +567,7 @@ export default function Notes() {
             >
               <ReactMarkdown
                 remarkPlugins={[remarkGfm, remarkMath]}
-                rehypePlugins={[rehypeKatex, rehypeHighlight]}
+                rehypePlugins={[rehypeKatex, rehypeHighlight, rehypeSlug]}
                 components={{
                   table: MarkdownTable,
                   pre: ({ node, className = '', children, ...props }) => {
