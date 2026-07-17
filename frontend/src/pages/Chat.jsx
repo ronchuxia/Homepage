@@ -220,14 +220,6 @@ function Message({ message }) {
           {MODELS.find((model) => model.value === message.model)?.label}
         </span>
       )}
-      {message.status && !message.content && (
-        <div className="flex items-center gap-1.5 text-sm text-neutral-500">
-          <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-sky-400 [animation-delay:-0.3s]" />
-          <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-sky-400 [animation-delay:-0.15s]" />
-          <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-sky-400" />
-          <span className="ml-1">{message.status}</span>
-        </div>
-      )}
       {message.content && (
         <article className="chat-prose prose prose-neutral max-w-none text-[15px] leading-relaxed prose-headings:tracking-tight prose-p:my-2 prose-p:first:mt-0 prose-p:last:mb-0 prose-li:my-0.5 prose-a:text-sky-700 prose-a:no-underline hover:prose-a:underline prose-pre:rounded-lg prose-pre:border prose-pre:border-neutral-200 prose-pre:bg-neutral-950 prose-pre:text-neutral-50">
           <ReactMarkdown
@@ -238,6 +230,14 @@ function Message({ message }) {
             {normalizeMathDelimiters(message.content)}
           </ReactMarkdown>
         </article>
+      )}
+      {message.status && (
+        <div className="flex items-center gap-1.5 text-sm text-neutral-500">
+          <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-sky-400 [animation-delay:-0.3s]" />
+          <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-sky-400 [animation-delay:-0.15s]" />
+          <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-sky-400" />
+          <span className="ml-1">{message.status}</span>
+        </div>
       )}
       {message.stopped && (
         <p className="text-sm text-neutral-500">Response stopped.</p>

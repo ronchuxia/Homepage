@@ -1,5 +1,5 @@
 import { MemoryRouter } from 'react-router-dom';
-import { render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, expect, test, vi } from 'vitest';
 
@@ -66,6 +66,38 @@ test('sends conversation history and renders the streamed answer', async () => {
     signal: expect.any(AbortSignal),
   });
   expect(await screen.findByText('Second answer')).toBeInTheDocument();
+});
+
+test('shows tool status after streamed text until the answer resumes', async () => {
+  let resumeStream;
+  const streamPaused = new Promise((resolve) => {
+    resumeStream = resolve;
+  });
+  streamChat.mockImplementation(async function* toolAfterTextStream() {
+    yield { type: 'token', text: 'First part.' };
+    yield { type: 'status', text: 'Searching' };
+    await streamPaused;
+    yield { type: 'token', text: ' Second part.' };
+    yield { type: 'done' };
+  });
+  const user = userEvent.setup();
+  renderChat();
+
+  await user.type(
+    screen.getByPlaceholderText("Ask anything about Xia's work…"),
+    'Use a tool',
+  );
+  await user.click(screen.getByRole('button', { name: 'Send' }));
+
+  expect(await screen.findByText('First part.')).toBeInTheDocument();
+  expect(await screen.findByText('Searching')).toBeInTheDocument();
+
+  await act(async () => {
+    resumeStream();
+  });
+
+  expect(await screen.findByText('First part. Second part.')).toBeInTheDocument();
+  expect(screen.queryByText('Searching')).not.toBeInTheDocument();
 });
 
 test('shows a generic error when the chat connection fails', async () => {
