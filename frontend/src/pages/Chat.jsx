@@ -3,6 +3,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
+import rehypeHighlight from 'rehype-highlight';
 import { Link } from 'react-router-dom';
 import { streamChat } from '../lib/chatClient';
 
@@ -224,7 +225,7 @@ function Message({ message }) {
         <article className="chat-prose prose prose-neutral max-w-none text-[15px] leading-relaxed prose-headings:tracking-tight prose-p:my-2 prose-p:first:mt-0 prose-p:last:mb-0 prose-li:my-0.5 prose-a:text-sky-700 prose-a:no-underline hover:prose-a:underline prose-pre:rounded-lg prose-pre:border prose-pre:border-neutral-200 prose-pre:bg-neutral-950 prose-pre:text-neutral-50">
           <ReactMarkdown
             remarkPlugins={[remarkGfm, remarkMath]}
-            rehypePlugins={[rehypeKatex]}
+            rehypePlugins={[rehypeKatex, rehypeHighlight]}
             components={{ table: MarkdownTable }}
           >
             {normalizeMathDelimiters(message.content)}

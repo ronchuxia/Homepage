@@ -115,6 +115,15 @@
   content: none;
 }
 
+/* The Highlight.js theme supplies token colors. The existing prose container
+   remains responsible for code-block padding, scrolling, and background. */
+.note-prose pre code.hljs,
+.chat-prose pre code.hljs {
+  overflow-x: visible;
+  background: transparent;
+  padding: 0;
+}
+
 /* Code blocks preserve source spacing intent. If the markdown has text directly
    beside a fenced block, hug it; if there is a blank source line, let it breathe.
    Neighbouring margins are adjusted too because adjacent vertical margins
