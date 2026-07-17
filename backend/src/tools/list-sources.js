@@ -4,7 +4,7 @@ import { existsSync } from 'node:fs';
 import path from 'node:path';
 
 import { CORPUS_ROOT, loadSources, resolveScopeRoots } from '../corpus.js';
-import { logTool, rgCorpusFlags, runRg, visibleSources } from './shared.js';
+import { rgCorpusFlags, runRg, visibleSources } from './shared.js';
 
 export async function listSources({ scope = 'all', includePrivate = false } = {}) {
   const sources = visibleSources(await loadSources(), includePrivate);
@@ -27,7 +27,5 @@ export async function listSources({ scope = 'all', includePrivate = false } = {}
       fileCount,
     });
   }
-
-  logTool('list_sources', { scope, count: result.length });
   return result;
 }

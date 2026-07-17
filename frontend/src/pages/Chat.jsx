@@ -442,7 +442,7 @@ export default function Chat() {
       }
     } catch (err) {
       if (err.name !== 'AbortError') {
-        console.error('Connection failed:', err);
+        console.error('Chat connection failed:', err);
         setError('Connection failed.');
       }
     } finally {

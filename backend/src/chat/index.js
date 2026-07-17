@@ -11,7 +11,7 @@
 
 import { runAnthropic } from './anthropic.js';
 import { runOpenAI } from './openai.js';
-import { providerRuntime } from './runtime.js';
+import { createProviderRuntime } from './runtime.js';
 
 const MODEL_PROVIDERS = {
   'gpt-5.6-sol': 'openai',
@@ -21,7 +21,7 @@ const MODEL_PROVIDERS = {
   'claude-sonnet-5': 'anthropic',
 };
 
-export async function* runChat(payload = {}, signal) {
+export async function* runChat(payload = {}, signal, trace) {
   const model = payload.model;
   if (!model) {
     throw new Error('Model is required.');
@@ -31,15 +31,15 @@ export async function* runChat(payload = {}, signal) {
   if (!provider) {
     throw new Error(`Model is invalid: ${model}`);
   }
-
   const keyName = provider === 'openai' ? 'OPENAI_API_KEY' : 'ANTHROPIC_API_KEY';
   if (!process.env[keyName]) {
     throw new Error(`Key is not set: ${keyName}`);
   }
-  
+
+  const runtime = createProviderRuntime(trace);
   if (provider === 'openai') {
-    yield* runOpenAI(payload, signal, model, providerRuntime);
+    yield* runOpenAI(payload, signal, model, runtime);
     return;
   }
-  yield* runAnthropic(payload, signal, model, providerRuntime);
+  yield* runAnthropic(payload, signal, model, runtime);
 }

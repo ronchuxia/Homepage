@@ -9,6 +9,7 @@
 
 import { createServer } from 'node:http';
 import { runChat } from './chat/index.js';
+import { createTrace } from './logging/index.js';
 
 const PORT = process.env.PORT || 8787;
 
@@ -65,6 +66,9 @@ const server = createServer(async (req, res) => {
       return;
     }
 
+    const trace = createTrace();
+    trace.setRequest(payload);
+
     res.writeHead(200, {
       'Content-Type': 'text/event-stream',
       'Cache-Control': 'no-cache',
@@ -73,21 +77,31 @@ const server = createServer(async (req, res) => {
     });
 
     // Stop generating if the client disconnects (e.g. the Stop button).
+    // Listen on res: req 'close' fires when the request body completes (before
+    // this listener attaches), so an abort wired to it never triggers.
     const controller = new AbortController();
-    req.on('close', () => controller.abort());
+    res.on('close', () => controller.abort());
 
     const send = (event) => res.write(`data: ${JSON.stringify(event)}\n\n`);
 
+    let terminalError;
     try {
-      for await (const event of runChat(payload, controller.signal)) {
+      for await (const event of runChat(payload, controller.signal, trace)) {
         send(event);
       }
     } catch (error) {
+      terminalError = error;
       if (!controller.signal.aborted) {
-        console.error('Backend failed:', error);
+        console.error('Chat backend failed:', error);
         send({ type: 'error', message: 'Backend failed.' });
       }
     } finally {
+      const status = controller.signal.aborted
+        ? 'aborted'
+        : terminalError
+          ? 'failed'
+          : 'completed';
+      await trace.finalize(status, terminalError);
       res.end();
     }
     return;

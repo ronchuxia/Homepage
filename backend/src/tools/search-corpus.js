@@ -13,7 +13,6 @@ import {
   DEFAULT_LIMIT,
   MAX_LIMIT,
   clamp,
-  logTool,
   parseRgMatches,
   rgSearchFlags,
   runRg,
@@ -29,7 +28,6 @@ export async function searchCorpus({
   if (!query || typeof query !== 'string') {
     throw new Error('query is required');
   }
-  const started = Date.now();
   const cap = clamp(limit, 1, MAX_LIMIT, DEFAULT_LIMIT);
 
   const sources = visibleSources(await loadSources(), includePrivate);
@@ -38,7 +36,6 @@ export async function searchCorpus({
     .filter((abs) => existsSync(abs));
 
   if (dirs.length === 0) {
-    logTool('search_corpus', { query, scope, count: 0, ms: Date.now() - started });
     return { hits: [], truncated: false };
   }
 
@@ -55,13 +52,5 @@ export async function searchCorpus({
       endLine: match.line,
     }),
   }));
-
-  logTool('search_corpus', {
-    query,
-    scope,
-    count: hits.length,
-    truncated,
-    ms: Date.now() - started,
-  });
   return { hits, truncated };
 }

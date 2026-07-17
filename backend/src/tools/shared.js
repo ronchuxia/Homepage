@@ -1,6 +1,6 @@
 // Shared internals for the corpus search tools: ripgrep invocation, output
-// parsing, bounds clamping, visibility filtering, and structured logging. No
-// model is involved — these back the pure-retrieval tools in this directory.
+// parsing, bounds clamping, and visibility filtering. No model is involved —
+// these back the pure-retrieval tools in this directory.
 
 import { execFile } from 'node:child_process';
 
@@ -19,10 +19,6 @@ const RG_MAX_BYTES = 4_000_000;
 export function clamp(value, min, max, fallback) {
   const n = Number.isFinite(value) ? Math.trunc(value) : fallback;
   return Math.min(max, Math.max(min, n));
-}
-
-export function logTool(tool, fields) {
-  console.log(JSON.stringify({ at: new Date().toISOString(), tool, ...fields }));
 }
 
 // Run ripgrep with bounded time/output. ripgrep exits 1 when there are simply

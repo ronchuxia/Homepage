@@ -3,15 +3,9 @@
 import { readFile } from 'node:fs/promises';
 
 import { buildCitation, loadSources, toAbsoluteExisting, toRelative } from '../corpus.js';
-import {
-  DEFAULT_READ_LINES,
-  MAX_READ_LINES,
-  clamp,
-  logTool,
-} from './shared.js';
+import { DEFAULT_READ_LINES, MAX_READ_LINES, clamp } from './shared.js';
 
 export async function readFileWindow({ path: filePath, startLine, lineCount } = {}) {
-  const started = Date.now();
   const abs = await toAbsoluteExisting(filePath);
   const sources = await loadSources();
 
@@ -23,8 +17,6 @@ export async function readFileWindow({ path: filePath, startLine, lineCount } = 
   const slice = allLines.slice(start - 1, start - 1 + count);
   const end = start + slice.length - 1;
   const relPath = toRelative(abs);
-
-  logTool('read_file', { path: relPath, start, end, ms: Date.now() - started });
   return {
     path: relPath,
     startLine: start,

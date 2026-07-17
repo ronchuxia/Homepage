@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { after, before, test } from 'node:test';
 
 import { runChat } from '../src/chat/index.js';
+import { createProviderRuntime } from '../src/chat/runtime.js';
 
 const originalOpenAIKey = process.env.OPENAI_API_KEY;
 const originalAnthropicKey = process.env.ANTHROPIC_API_KEY;
@@ -54,4 +55,25 @@ test('runChat requires the selected Anthropic key', async () => {
     consume(runChat({ model: 'claude-opus-4-8', messages: [] })),
     /Key is not set: ANTHROPIC_API_KEY/,
   );
+});
+
+test('reasoning summaries are disabled unless explicitly enabled', () => {
+  const originalValue = process.env.CHAT_REASONING_SUMMARIES;
+
+  try {
+    delete process.env.CHAT_REASONING_SUMMARIES;
+    assert.equal(createProviderRuntime(null).reasoningSummariesEnabled, false);
+
+    process.env.CHAT_REASONING_SUMMARIES = 'false';
+    assert.equal(createProviderRuntime(null).reasoningSummariesEnabled, false);
+
+    process.env.CHAT_REASONING_SUMMARIES = 'true';
+    assert.equal(createProviderRuntime(null).reasoningSummariesEnabled, true);
+  } finally {
+    if (originalValue === undefined) {
+      delete process.env.CHAT_REASONING_SUMMARIES;
+    } else {
+      process.env.CHAT_REASONING_SUMMARIES = originalValue;
+    }
+  }
 });

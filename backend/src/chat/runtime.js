@@ -22,7 +22,16 @@ function statusFor(block) {
   return 'Working…';
 }
 
-async function runTool(block, cite) {
+async function runTool(block, cite, toolRound, trace) {
+  const started = Date.now();
+  const metadata = {
+    toolName: block.name,
+    toolRound,
+    ...(block.input?.path ? { filePath: block.input.path } : {}),
+  };
+  trace.incrementSummaryMetric('toolCallCount');
+  trace.appendEvent('tool.started', metadata, { arguments: block.input });
+
   try {
     if (block.name === 'search_corpus') {
       const { hits, truncated } = await searchCorpus({
@@ -33,7 +42,7 @@ async function runTool(block, cite) {
       for (const hit of hits) {
         if (hit.citation.url) cite.search.set(hit.path, hit.citation);
       }
-      return {
+      const result = {
         content: JSON.stringify({
           hits: hits.map((hit) => ({
             path: hit.path,
@@ -43,6 +52,17 @@ async function runTool(block, cite) {
           truncated,
         }),
       };
+      trace.appendEvent(
+        'tool.completed',
+        {
+          ...metadata,
+          durationMs: Date.now() - started,
+          resultCount: hits.length,
+          truncated: truncated,
+        },
+        { result: result.content },
+      );
+      return result;
     }
 
     if (block.name === 'read_file') {
@@ -52,17 +72,44 @@ async function runTool(block, cite) {
         lineCount: block.input.line_count,
       });
       if (result.citation.url) cite.read.set(result.path, result.citation);
-      return {
+      const toolResult = {
         content: `${result.path} (lines ${result.startLine}-${result.endLine} of ${result.totalLines}):\n${result.content}`,
       };
+      trace.appendEvent(
+        'tool.completed',
+        {
+          ...metadata,
+          durationMs: Date.now() - started,
+        },
+        { result: toolResult.content },
+      );
+      return toolResult;
     }
 
     if (block.name === 'list_sources') {
-      return { content: JSON.stringify(await listSources({ scope: block.input.scope })) };
+      const sources = await listSources({ scope: block.input.scope });
+      const result = { content: JSON.stringify(sources) };
+      trace.appendEvent(
+        'tool.completed',
+        {
+          ...metadata,
+          durationMs: Date.now() - started,
+          resultCount: sources.length,
+        },
+        { result: result.content },
+      );
+      return result;
     }
 
-    return { content: `Unknown tool: ${block.name}`, is_error: true };
+    throw new Error(`Unknown tool: ${block.name}`);
   } catch (error) {
+    trace.appendEvent('tool.failed', {
+      ...metadata,
+      durationMs: Date.now() - started,
+      errorName: error.name,
+      errorMessage: error.message,
+      stack: error.stack,
+    });
     return { content: `Error: ${error.message}`, is_error: true };
   }
 }
@@ -77,18 +124,27 @@ function citationsFrom(cite) {
   }));
 }
 
-async function* finishWithCitations(cite) {
+async function* finishWithCitations(cite, trace) {
   const citations = citationsFrom(cite);
+  trace.setSummaryMetric('citationCount', citations.length);
+  for (const citation of citations) {
+    trace.appendEvent('citation.selected', { citation });
+  }
   if (citations.length) {
     yield { type: 'citations', citations };
   }
   yield { type: 'done' };
 }
 
-export const providerRuntime = {
-  maxTokens: MAX_TOKENS,
-  maxToolRounds: MAX_TOOL_ROUNDS,
-  statusFor,
-  runTool,
-  finishWithCitations,
-};
+export function createProviderRuntime(trace) {
+  return {
+    maxTokens: MAX_TOKENS,
+    maxToolRounds: MAX_TOOL_ROUNDS,
+    reasoningSummariesEnabled:
+      process.env.CHAT_REASONING_SUMMARIES === 'true',
+    trace,
+    statusFor,
+    runTool: (block, cite, toolRound) => runTool(block, cite, toolRound, trace),
+    finishWithCitations: (cite) => finishWithCitations(cite, trace),
+  };
+}

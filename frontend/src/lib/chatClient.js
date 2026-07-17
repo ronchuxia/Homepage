@@ -48,7 +48,7 @@ export async function* streamChat({ messages, model, signal }) {
       try {
         yield JSON.parse(dataLine.slice(5).trim());
       } catch {
-        console.warn('Malformed frame:', frame);
+        console.warn('Chat malformed frame:', frame);
       }
     }
   }
