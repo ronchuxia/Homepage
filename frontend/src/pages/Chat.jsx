@@ -47,7 +47,7 @@ function MarkdownTable(tableProps) {
   delete props.node;
 
   return (
-    <div className="my-5 overflow-x-auto rounded-lg border border-neutral-200">
+    <div className="markdown-table my-5 overflow-x-auto rounded-lg border border-neutral-200 bg-white shadow-sm">
       <table className="my-0 min-w-full" {...props} />
     </div>
   );

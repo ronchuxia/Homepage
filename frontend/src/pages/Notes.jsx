@@ -1,6 +1,7 @@
 import { Link, useLocation } from 'react-router-dom';
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
 import rehypeHighlight from 'rehype-highlight';
@@ -132,6 +133,17 @@ function getCodeBlockSpacingClass(node, markdownLines) {
       ? 'note-code--loose-after'
       : 'note-code--tight-after',
   ].join(' ');
+}
+
+function MarkdownTable(tableProps) {
+  const props = { ...tableProps };
+  delete props.node;
+
+  return (
+    <div className="markdown-table my-5 overflow-x-auto rounded-lg border border-neutral-200 bg-white shadow-sm">
+      <table className="my-0 min-w-full" {...props} />
+    </div>
+  );
 }
 
 function TreeNode({ node, selectedSlug, expandedFolders, onToggleFolder, registerSelected }) {
@@ -485,9 +497,10 @@ export default function Notes() {
               className="note-prose prose prose-neutral max-w-none animate-fade-up prose-headings:tracking-tight prose-li:my-[0.15em] prose-a:font-medium prose-a:text-sky-700 prose-a:no-underline hover:prose-a:underline prose-pre:rounded-lg prose-pre:border prose-pre:border-neutral-200 prose-pre:bg-neutral-950 prose-pre:text-neutral-50 prose-img:rounded-lg prose-img:border prose-img:border-neutral-200"
             >
               <ReactMarkdown
-                remarkPlugins={[remarkMath]}
+                remarkPlugins={[remarkGfm, remarkMath]}
                 rehypePlugins={[rehypeKatex, rehypeHighlight]}
                 components={{
+                  table: MarkdownTable,
                   pre: ({ node, className = '', children, ...props }) => {
                     const spacingClass = getCodeBlockSpacingClass(
                       node,
