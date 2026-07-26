@@ -12,25 +12,18 @@ import {
 const sources = [
   {
     id: 'notes',
-    type: 'note',
+    type: 'notes',
     root: 'notes',
-    citation: { kind: 'notes-slug', base: '/notes/' },
+    citation: { base: '/notes/' },
   },
   {
     id: 'workspace',
-    type: 'github_repo',
+    type: 'github',
     root: 'github/workspace',
     citation: {
-      kind: 'github-blob',
       repo: 'owner/workspace',
       sha: 'abc123',
     },
-  },
-  {
-    id: 'resume',
-    type: 'resume',
-    root: 'profile',
-    citation: { kind: 'none' },
   },
 ];
 
@@ -49,11 +42,9 @@ test('resolveScopeRoots selects source groups and source identifiers', () => {
   assert.deepEqual(resolveScopeRoots('all', sources), [
     'notes',
     'github/workspace',
-    'profile',
   ]);
   assert.deepEqual(resolveScopeRoots('notes', sources), ['notes']);
   assert.deepEqual(resolveScopeRoots('github', sources), ['github/workspace']);
-  assert.deepEqual(resolveScopeRoots('profile', sources), ['profile']);
   assert.deepEqual(resolveScopeRoots('workspace', sources), ['github/workspace']);
   assert.deepEqual(resolveScopeRoots('missing', sources), []);
 });
@@ -63,9 +54,9 @@ test('sourceForPath chooses the longest matching source root', () => {
     ...sources,
     {
       id: 'nested',
-      type: 'github_repo',
+      type: 'github',
       root: 'github/workspace/packages/app',
-      citation: { kind: 'none' },
+      citation: {},
     },
   ];
 
@@ -80,7 +71,7 @@ test('buildCitation creates internal note links', () => {
   assert.deepEqual(buildCitation('notes/Robotics/Planning.md', sources), {
     source: 'Robotics',
     title: 'Planning',
-    type: 'note',
+    type: 'notes',
     url: '/notes/Robotics/Planning',
     path: 'notes/Robotics/Planning.md',
   });
@@ -95,7 +86,7 @@ test('buildCitation creates GitHub line links', () => {
     {
       source: 'workspace',
       title: 'src/main.js',
-      type: 'code',
+      type: 'github',
       url: 'https://github.com/owner/workspace/blob/abc123/src/main.js#L12-L18',
       path: 'github/workspace/src/main.js',
     },

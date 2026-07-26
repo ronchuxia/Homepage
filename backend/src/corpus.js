@@ -73,19 +73,16 @@ export async function loadSources() {
 }
 
 // Map a request scope to the corpus-relative roots to search. A scope can be
-// "all", a source-type group ("notes" | "github" | "resume"), or a source id.
+// "all", a source-type group ("notes" | "github"), or a source id.
 export function resolveScopeRoots(scope, sources) {
   if (!scope || scope === 'all') {
     return sources.map((source) => source.root);
   }
   if (scope === 'notes') {
-    return sources.filter((s) => s.type === 'note').map((s) => s.root);
+    return sources.filter((s) => s.type === 'notes').map((s) => s.root);
   }
   if (scope === 'github') {
-    return sources.filter((s) => s.type === 'github_repo').map((s) => s.root);
-  }
-  if (scope === 'resume' || scope === 'profile') {
-    return sources.filter((s) => s.type === 'resume').map((s) => s.root);
+    return sources.filter((s) => s.type === 'github').map((s) => s.root);
   }
   return sources.filter((s) => s.id === scope).map((s) => s.root);
 }
@@ -109,24 +106,24 @@ export function buildCitation(relPath, sources, range = {}) {
   const name = relPath.split('/').pop();
 
   if (!source) {
-    return { source: null, title: name, type: 'file', url: null, path: relPath };
+    return { source: null, title: name, url: null, path: relPath };
   }
 
-  const rule = source.citation;
+  const citation = source.citation;
 
-  if (rule.kind === 'notes-slug') {
+  if (source.type === 'notes') {
     const slug = relPath.slice(source.root.length + 1).replace(/\.md$/, '');
     const parts = slug.split('/');
     return {
       source: parts.length > 1 ? parts[0] : 'Notes',
       title: parts.at(-1),
-      type: 'note',
-      url: `${rule.base}${slug}`,
+      type: source.type,
+      url: `${citation.base}${slug}`,
       path: relPath,
     };
   }
 
-  if (rule.kind === 'github-blob') {
+  if (source.type === 'github') {
     const sub = relPath.slice(source.root.length + 1);
     let fragment = '';
     if (range.startLine) {
@@ -136,10 +133,10 @@ export function buildCitation(relPath, sources, range = {}) {
           : `#L${range.startLine}`;
     }
     return {
-      source: rule.repo.split('/').at(-1),
+      source: citation.repo.split('/').at(-1),
       title: sub,
-      type: 'code',
-      url: `https://github.com/${rule.repo}/blob/${rule.sha}/${sub}${fragment}`,
+      type: source.type,
+      url: `https://github.com/${citation.repo}/blob/${citation.sha}/${sub}${fragment}`,
       path: relPath,
     };
   }

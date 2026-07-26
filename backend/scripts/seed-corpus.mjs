@@ -7,7 +7,6 @@
 //   corpus/
 //     notes/<folder>/<note>.md      a subset of the Obsidian vault (../notes)
 //     github/<repo>/<source>        filtered clone: source/text only, no binaries
-//     profile/resume.md             placeholder for the (later) extracted resume
 //     sources.json                  source registry for list_sources + citations
 //
 // Re-runnable: it wipes corpus/ and rebuilds, cloning the repos fresh into a
@@ -148,10 +147,10 @@ async function main() {
   }
   sources.push({
     id: 'notes',
-    type: 'note',
+    type: 'notes',
     root: 'notes',
     visibility: 'public',
-    citation: { kind: 'notes-slug', base: '/notes/' },
+    citation: { base: '/notes/' },
   });
   console.log(`notes:   ${notesFiles} files`);
 
@@ -170,34 +169,16 @@ async function main() {
       );
       sources.push({
         id: r.id,
-        type: 'github_repo',
+        type: 'github',
         root: `github/${r.id}`,
         visibility: 'public',
-        citation: { kind: 'github-blob', repo: r.repo, sha },
+        citation: { repo: r.repo, sha },
       });
       console.log(`${r.id}: ${count} files @ ${sha.slice(0, 10)}`);
     }
   } finally {
     await rm(cloneParent, { recursive: true, force: true });
   }
-
-  // --- profile (placeholder) -------------------------------------------------
-  await mkdir(path.join(corpusRoot, 'profile'), { recursive: true });
-  await writeFile(
-    path.join(corpusRoot, 'profile', 'resume.md'),
-    '# Resume (placeholder)\n\n' +
-      'Placeholder for the extracted text of Xia’s resume. The real resume\n' +
-      'is added in a later phase: the original PDF is stored privately and its\n' +
-      'text is extracted into this file so it becomes searchable.\n',
-  );
-  sources.push({
-    id: 'resume',
-    type: 'resume',
-    root: 'profile',
-    visibility: 'public',
-    citation: { kind: 'none' },
-  });
-  console.log('profile: 1 file (placeholder)');
 
   // --- registry --------------------------------------------------------------
   await writeFile(

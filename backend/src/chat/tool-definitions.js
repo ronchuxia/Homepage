@@ -14,7 +14,7 @@ export const TOOLS = [
         scope: {
           type: 'string',
           description:
-            "Where to search: 'all' (default), 'notes', 'github', or 'resume'.",
+            "Where to search: 'all' (default), 'notes', or 'github'.",
         },
         limit: { type: 'integer', description: 'Max results (default 20).' },
       },
@@ -41,7 +41,7 @@ export const TOOLS = [
     input_schema: {
       type: 'object',
       properties: {
-        scope: { type: 'string', description: "Optional: 'all', 'notes', 'github', 'resume'." },
+        scope: { type: 'string', description: "Optional: 'all', 'notes', or 'github'." },
       },
     },
   },
