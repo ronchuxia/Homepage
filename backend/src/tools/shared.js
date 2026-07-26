@@ -1,6 +1,6 @@
 // Shared internals for the corpus search tools: ripgrep invocation, output
-// parsing, bounds clamping, and visibility filtering. No model is involved —
-// these back the pure-retrieval tools in this directory.
+// parsing, and bounds clamping. No model is involved — these back the
+// pure-retrieval tools in this directory.
 
 import { execFile } from 'node:child_process';
 
@@ -79,9 +79,3 @@ export const rgSearchFlags = [
   '--max-columns-preview',
   ...rgCorpusFlags,
 ];
-
-export function visibleSources(sources, includePrivate) {
-  return includePrivate
-    ? sources
-    : sources.filter((source) => source.visibility === 'public');
-}

@@ -16,21 +16,19 @@ import {
   parseRgMatches,
   rgSearchFlags,
   runRg,
-  visibleSources,
 } from './shared.js';
 
 export async function searchCorpus({
   query,
   scope = 'all',
   limit,
-  includePrivate = false,
 } = {}) {
   if (!query || typeof query !== 'string') {
     throw new Error('query is required');
   }
   const cap = clamp(limit, 1, MAX_LIMIT, DEFAULT_LIMIT);
 
-  const sources = visibleSources(await loadSources(), includePrivate);
+  const sources = await loadSources();
   const dirs = resolveScopeRoots(scope, sources)
     .map((root) => path.join(CORPUS_ROOT, root))
     .filter((abs) => existsSync(abs));

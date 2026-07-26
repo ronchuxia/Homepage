@@ -4,10 +4,10 @@ import { existsSync } from 'node:fs';
 import path from 'node:path';
 
 import { CORPUS_ROOT, loadSources, resolveScopeRoots } from '../corpus.js';
-import { rgCorpusFlags, runRg, visibleSources } from './shared.js';
+import { rgCorpusFlags, runRg } from './shared.js';
 
-export async function listSources({ scope = 'all', includePrivate = false } = {}) {
-  const sources = visibleSources(await loadSources(), includePrivate);
+export async function listSources({ scope = 'all' } = {}) {
+  const sources = await loadSources();
   const roots = new Set(resolveScopeRoots(scope, sources));
   const selected = sources.filter((source) => roots.has(source.root));
 
@@ -22,7 +22,6 @@ export async function listSources({ scope = 'all', includePrivate = false } = {}
     result.push({
       id: source.id,
       type: source.type,
-      visibility: source.visibility,
       root: source.root,
       fileCount,
     });

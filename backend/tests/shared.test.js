@@ -6,7 +6,6 @@ import { CORPUS_ROOT } from '../src/corpus.js';
 import {
   clamp,
   parseRgMatches,
-  visibleSources,
 } from '../src/tools/shared.js';
 
 test('clamp applies bounds and a fallback', () => {
@@ -14,16 +13,6 @@ test('clamp applies bounds and a fallback', () => {
   assert.equal(clamp(0, 1, 50, 20), 1);
   assert.equal(clamp(75, 1, 50, 20), 50);
   assert.equal(clamp(12.9, 1, 50, 20), 12);
-});
-
-test('visibleSources hides private sources by default', () => {
-  const sources = [
-    { id: 'public', visibility: 'public' },
-    { id: 'private', visibility: 'private' },
-  ];
-
-  assert.deepEqual(visibleSources(sources, false), [sources[0]]);
-  assert.deepEqual(visibleSources(sources, true), sources);
 });
 
 test('parseRgMatches extracts valid matches and ignores other lines', () => {
