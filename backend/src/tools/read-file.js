@@ -18,7 +18,14 @@ export async function readFileWindow({ path: filePath, startLine, lineCount } = 
   validateSearchPath(relPath, sources);
 
   const abs = path.join(CORPUS_ROOT, relPath);
-  const content = await readFile(abs, 'utf8');
+  let content;
+  try {
+    content = await readFile(abs, 'utf8');
+  } catch (error) {
+    if (error.code === 'ENOENT') throw new Error('file not found');
+    if (error.code === 'EISDIR') throw new Error('path is a directory');
+    throw error;
+  }
   const allLines = content.split('\n');
 
   const start = clamp(startLine, 1, Math.max(1, allLines.length), 1);

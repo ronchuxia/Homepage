@@ -16,7 +16,7 @@ export async function listSources({ scope = 'all' } = {}) {
     const abs = path.join(CORPUS_ROOT, source.root);
     let fileCount = 0;
     if (existsSync(abs)) {
-      const listing = await runRg(['--files', ...rgCorpusFlags, abs]);
+      const listing = await runRg(['--files', ...rgCorpusFlags, '--', abs]);
       fileCount = listing ? listing.trimEnd().split('\n').length : 0;
     }
     result.push({
