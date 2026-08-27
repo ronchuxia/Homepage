@@ -3,7 +3,7 @@
 // Every file access in the search tools goes through here so that a path
 // supplied by a caller (and later, by the model) can never escape /corpus.
 
-import { readFile, realpath } from 'node:fs/promises';
+import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -11,55 +11,27 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 
 export const CORPUS_ROOT = path.resolve(here, '..', 'corpus');
 
-export class CorpusError extends Error {}
-
-// Normalize a caller-supplied path to a safe POSIX-relative path inside the
-// corpus. Rejects NUL bytes and any `..` segment that escapes the root.
-// Absolute inputs are treated as corpus-relative (leading slashes stripped).
-export function safeRelPath(input) {
+// Normalize a caller-supplied relative path inside a root directory, the
+// corpus by default. Reject absolute paths, NUL bytes, and any `..` segment
+// that escapes the root.
+export function safeRelPath(input, root = CORPUS_ROOT) {
   if (typeof input !== 'string' || input.length === 0) {
-    throw new CorpusError('a path is required');
+    throw new Error('path is required');
   }
   if (input.includes('\0')) {
-    throw new CorpusError('invalid path');
+    throw new Error('path is invalid');
+  }
+  if (path.isAbsolute(input)) {
+    throw new Error('path must be relative');
   }
 
-  const cleaned = input.replace(/^[/\\]+/, '');
-  const abs = path.resolve(CORPUS_ROOT, cleaned);
-  const rel = path.relative(CORPUS_ROOT, abs);
+  const rel = path.relative(root, path.resolve(root, input));
 
-  if (rel === '') {
-    return ''; // the corpus root itself (used for listing)
-  }
-  if (rel === '..' || rel.startsWith(`..${path.sep}`) || path.isAbsolute(rel)) {
-    throw new CorpusError('path escapes the corpus');
+  if (rel === '..' || rel.startsWith('../')) {
+    throw new Error('path escapes the corpus');
   }
 
-  return rel.split(path.sep).join('/');
-}
-
-// Resolve to an absolute path and verify, via realpath, that symlinks do not
-// escape the corpus. Use for paths that must already exist (read/search a file).
-export async function toAbsoluteExisting(input) {
-  const rel = safeRelPath(input);
-  const abs = path.join(CORPUS_ROOT, rel);
-
-  let real;
-  try {
-    real = await realpath(abs);
-  } catch {
-    throw new CorpusError('not found');
-  }
-
-  const realRoot = await realpath(CORPUS_ROOT);
-  if (real !== realRoot && !real.startsWith(realRoot + path.sep)) {
-    throw new CorpusError('path escapes the corpus');
-  }
-  return abs;
-}
-
-export function toRelative(absPath) {
-  return path.relative(CORPUS_ROOT, absPath).split(path.sep).join('/');
+  return rel;
 }
 
 let cachedSources = null;
@@ -73,7 +45,7 @@ export async function loadSources() {
 }
 
 // Map a request scope to the corpus-relative roots to search. A scope can be
-// "all", a source-type group ("notes" | "github"), or a source id.
+// "all", a source-type group, or a source id.
 export function resolveScopeRoots(scope, sources) {
   if (!scope || scope === 'all') {
     return sources.map((source) => source.root);
@@ -83,6 +55,12 @@ export function resolveScopeRoots(scope, sources) {
   }
   if (scope === 'github') {
     return sources.filter((s) => s.type === 'github').map((s) => s.root);
+  }
+  if (scope === 'materials') {
+    return sources.filter((s) => s.type === 'materials').map((s) => s.root);
+  }
+  if (scope === 'websites') {
+    return sources.filter((s) => s.type === 'websites').map((s) => s.root);
   }
   return sources.filter((s) => s.id === scope).map((s) => s.root);
 }
@@ -98,6 +76,14 @@ export function sourceForPath(relPath, sources) {
     }
   }
   return best;
+}
+
+export function validateSearchPath(relPath, sources) {
+  const source = sourceForPath(relPath, sources);
+  if (!source) {
+    throw new Error('path is not in a search root');
+  }
+  return source;
 }
 
 // Build a display citation for a hit, using the owning source's citation rule.
@@ -118,13 +104,14 @@ export function buildCitation(relPath, sources, range = {}) {
       source: parts.length > 1 ? parts[0] : 'Notes',
       title: parts.at(-1),
       type: source.type,
-      url: `${citation.base}${slug}`,
+      url: `${citation.base}/${slug}`,
       path: relPath,
     };
   }
 
   if (source.type === 'github') {
     const sub = relPath.slice(source.root.length + 1);
+    const repositoryName = new URL(citation.base).pathname.split('/')[2];
     let fragment = '';
     if (range.startLine) {
       fragment =
@@ -133,10 +120,36 @@ export function buildCitation(relPath, sources, range = {}) {
           : `#L${range.startLine}`;
     }
     return {
-      source: citation.repo.split('/').at(-1),
+      source: repositoryName,
       title: sub,
       type: source.type,
-      url: `https://github.com/${citation.repo}/blob/${citation.sha}/${sub}${fragment}`,
+      url: `${citation.base}/${sub}${fragment}`,
+      path: relPath,
+    };
+  }
+
+  if (source.type === 'materials') {
+    const pageNumber = Number(path.basename(relPath, '.txt').slice('page-'.length));
+    const materialParts = new URL(citation.base).pathname.slice('/materials/'.length).split('/');
+    const materialSource = materialParts.length > 1 ? materialParts[0] : 'Materials';
+    const materialTitle = materialParts.at(-1);
+    return {
+      source: materialSource,
+      title: `${materialTitle}`,
+      type: source.type,
+      url: `${citation.base}#page=${pageNumber}`,
+      path: relPath,
+    };
+  }
+
+  if (source.type === 'websites') {
+    const sub = relPath.slice(source.root.length + 1);
+    const route = sub.replace(/(^|\/)index\.html$/i, '$1');
+    return {
+      source: source.id,
+      title: name.replace(/\.html?$/i, ''),
+      type: source.type,
+      url: new URL(route, `${citation.base}/`).toString(),
       path: relPath,
     };
   }

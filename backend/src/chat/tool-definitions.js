@@ -6,7 +6,7 @@ export const TOOLS = [
   {
     name: 'search_corpus',
     description:
-      "Search Xia's corpus (notes + GitHub source) for a query. Call this before answering any factual question about Xia's work. Returns matching files with line numbers and snippets.",
+      "Search Xia's corpus of notes, GitHub source, materials, and websites. Call this before answering any factual question about Xia's work. Returns matching files with line numbers and snippets.",
     input_schema: {
       type: 'object',
       properties: {
@@ -14,7 +14,7 @@ export const TOOLS = [
         scope: {
           type: 'string',
           description:
-            "Where to search: 'all' (default), 'notes', or 'github'.",
+            "Where to search: 'all' (default), 'notes', 'github', 'materials', 'websites', or a source identifier.",
         },
         limit: { type: 'integer', description: 'Max results (default 20).' },
       },
@@ -41,7 +41,7 @@ export const TOOLS = [
     input_schema: {
       type: 'object',
       properties: {
-        scope: { type: 'string', description: "Optional: 'all', 'notes', or 'github'." },
+        scope: { type: 'string', description: "Optional: 'all', 'notes', 'github', 'materials', 'websites', or a source identifier." },
       },
     },
   },

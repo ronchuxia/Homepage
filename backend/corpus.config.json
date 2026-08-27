@@ -1,0 +1,79 @@
+{
+  "publicBackendOrigin": "http://localhost:8787",
+  "sources": [
+    {
+      "id": "notes",
+      "type": "notes",
+      "url": "https://github.com/ronchuxia/Notes.git",
+      "ref": "main",
+      "citationBase": "/notes"
+    },
+    {
+      "id": "materials",
+      "type": "materials",
+      "url": "https://github.com/ronchuxia/Homepage-materials.git",
+      "ref": "main"
+    },
+    {
+      "id": "portfolio",
+      "type": "websites",
+      "url": "https://github.com/ronchuxia/ronchuxia.github.io.git",
+      "ref": "main",
+      "citationBase": "https://ronchuxia.github.io"
+    },
+    {
+      "id": "RayTracerCUDA",
+      "type": "github",
+      "url": "https://github.com/ronchuxia/RayTracerCUDA.git",
+      "ref": "main"
+    },
+    {
+      "id": "f1tenth_isaac",
+      "type": "github",
+      "url": "https://github.com/ronchuxia/f1tenth_isaac.git",
+      "ref": "main"
+    },
+    {
+      "id": "f1tenth_ws",
+      "type": "github",
+      "url": "https://github.com/ronchuxia/f1tenth_ws.git",
+      "ref": "main"
+    },
+    {
+      "id": "f1tenth_sim_ws",
+      "type": "github",
+      "url": "https://github.com/ronchuxia/f1tenth_sim_ws.git",
+      "ref": "main"
+    },
+    {
+      "id": "f1tenth_teleop",
+      "type": "github",
+      "url": "https://github.com/ronchuxia/f1tenth_teleop.git",
+      "ref": "main"
+    },
+    {
+      "id": "16831-project-franka-kitchen",
+      "type": "github",
+      "url": "https://github.com/ronchuxia/16831-project-franka-kitchen.git",
+      "ref": "main"
+    },
+    {
+      "id": "16831-S26-HW",
+      "type": "github",
+      "url": "https://github.com/ronchuxia/16831-S26-HW.git",
+      "ref": "main"
+    },
+    {
+      "id": "Homepage",
+      "type": "github",
+      "url": "https://github.com/ronchuxia/Homepage.git",
+      "ref": "dev"
+    },
+    {
+      "id": "VSCode-Colorful-Tags",
+      "type": "github",
+      "url": "https://github.com/ronchuxia/VSCode-Colorful-Tags.git",
+      "ref": "main"
+    }
+  ]
+}

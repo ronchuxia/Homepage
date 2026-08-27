@@ -2,50 +2,67 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
 import {
-  CorpusError,
   buildCitation,
   resolveScopeRoots,
   safeRelPath,
   sourceForPath,
+  validateSearchPath,
 } from '../src/corpus.js';
 
 const sources = [
   {
     id: 'notes',
     type: 'notes',
-    root: 'notes',
-    citation: { base: '/notes/' },
+    root: 'search/notes',
+    citation: { base: '/notes' },
   },
   {
     id: 'workspace',
     type: 'github',
-    root: 'github/workspace',
+    root: 'search/github/workspace',
     citation: {
-      repo: 'owner/workspace',
-      sha: 'abc123',
+      base: 'https://github.com/owner/workspace/blob/abc123',
     },
+  },
+  {
+    type: 'materials',
+    root: 'search/materials/profile/resume',
+    citation: {
+      base: 'https://api.example.com/materials/profile/resume.pdf',
+    },
+  },
+  {
+    id: 'portfolio',
+    type: 'websites',
+    root: 'search/websites/portfolio',
+    citation: { base: 'https://example.com/projects' },
   },
 ];
 
-test('safeRelPath normalizes paths inside the corpus', () => {
-  assert.equal(safeRelPath('/notes/Robotics/Overview.md'), 'notes/Robotics/Overview.md');
-  assert.equal(safeRelPath('github/workspace/src/main.js'), 'github/workspace/src/main.js');
+test('safeRelPath normalizes relative paths inside the corpus', () => {
+  assert.equal(safeRelPath('search/notes/Robotics/Overview.md'), 'search/notes/Robotics/Overview.md');
+  assert.equal(safeRelPath('search/github/workspace/src/main.js'), 'search/github/workspace/src/main.js');
 });
 
-test('safeRelPath rejects missing, invalid, and escaping paths', () => {
-  assert.throws(() => safeRelPath(), CorpusError);
-  assert.throws(() => safeRelPath('notes/invalid\0name.md'), CorpusError);
+test('safeRelPath rejects missing, absolute, invalid, and escaping paths', () => {
+  assert.throws(() => safeRelPath(), /path is required/);
+  assert.throws(() => safeRelPath('/search/notes/Robotics/Overview.md'), /path must be relative/);
+  assert.throws(() => safeRelPath('notes/invalid\0name.md'), /path is invalid/);
   assert.throws(() => safeRelPath('../outside.txt'), /path escapes the corpus/);
 });
 
 test('resolveScopeRoots selects source groups and source identifiers', () => {
   assert.deepEqual(resolveScopeRoots('all', sources), [
-    'notes',
-    'github/workspace',
+    'search/notes',
+    'search/github/workspace',
+    'search/materials/profile/resume',
+    'search/websites/portfolio',
   ]);
-  assert.deepEqual(resolveScopeRoots('notes', sources), ['notes']);
-  assert.deepEqual(resolveScopeRoots('github', sources), ['github/workspace']);
-  assert.deepEqual(resolveScopeRoots('workspace', sources), ['github/workspace']);
+  assert.deepEqual(resolveScopeRoots('notes', sources), ['search/notes']);
+  assert.deepEqual(resolveScopeRoots('github', sources), ['search/github/workspace']);
+  assert.deepEqual(resolveScopeRoots('materials', sources), ['search/materials/profile/resume']);
+  assert.deepEqual(resolveScopeRoots('websites', sources), ['search/websites/portfolio']);
+  assert.deepEqual(resolveScopeRoots('workspace', sources), ['search/github/workspace']);
   assert.deepEqual(resolveScopeRoots('missing', sources), []);
 });
 
@@ -55,31 +72,39 @@ test('sourceForPath chooses the longest matching source root', () => {
     {
       id: 'nested',
       type: 'github',
-      root: 'github/workspace/packages/app',
+      root: 'search/github/workspace/packages/app',
       citation: {},
     },
   ];
 
   assert.equal(
-    sourceForPath('github/workspace/packages/app/index.js', nestedSources)?.id,
+    sourceForPath('search/github/workspace/packages/app/index.js', nestedSources)?.id,
     'nested',
   );
   assert.equal(sourceForPath('unknown/file.txt', nestedSources), null);
 });
 
+test('validateSearchPath rejects paths outside search roots', () => {
+  assert.equal(validateSearchPath('search/notes/Robotics/Test.md', sources).id, 'notes');
+  assert.throws(
+    () => validateSearchPath('materials/profile/resume.pdf', sources),
+    /path is not in a search root/,
+  );
+});
+
 test('buildCitation creates internal note links', () => {
-  assert.deepEqual(buildCitation('notes/Robotics/Planning.md', sources), {
+  assert.deepEqual(buildCitation('search/notes/Robotics/Planning.md', sources), {
     source: 'Robotics',
     title: 'Planning',
     type: 'notes',
     url: '/notes/Robotics/Planning',
-    path: 'notes/Robotics/Planning.md',
+    path: 'search/notes/Robotics/Planning.md',
   });
 });
 
 test('buildCitation creates GitHub line links', () => {
   assert.deepEqual(
-    buildCitation('github/workspace/src/main.js', sources, {
+    buildCitation('search/github/workspace/src/main.js', sources, {
       startLine: 12,
       endLine: 18,
     }),
@@ -88,7 +113,33 @@ test('buildCitation creates GitHub line links', () => {
       title: 'src/main.js',
       type: 'github',
       url: 'https://github.com/owner/workspace/blob/abc123/src/main.js#L12-L18',
-      path: 'github/workspace/src/main.js',
+      path: 'search/github/workspace/src/main.js',
+    },
+  );
+});
+
+test('buildCitation creates PDF page links', () => {
+  assert.deepEqual(
+    buildCitation('search/materials/profile/resume/pages/page-0002.txt', sources),
+    {
+      source: 'profile',
+      title: 'resume.pdf',
+      type: 'materials',
+      url: 'https://api.example.com/materials/profile/resume.pdf#page=2',
+      path: 'search/materials/profile/resume/pages/page-0002.txt',
+    },
+  );
+});
+
+test('buildCitation creates live website links', () => {
+  assert.deepEqual(
+    buildCitation('search/websites/portfolio/demo/index.html', sources),
+    {
+      source: 'portfolio',
+      title: 'index',
+      type: 'websites',
+      url: 'https://example.com/projects/demo/',
+      path: 'search/websites/portfolio/demo/index.html',
     },
   );
 });

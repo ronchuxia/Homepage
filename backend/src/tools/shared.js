@@ -3,8 +3,9 @@
 // pure-retrieval tools in this directory.
 
 import { execFile } from 'node:child_process';
+import path from 'node:path';
 
-import { toRelative } from '../corpus.js';
+import { CORPUS_ROOT } from '../corpus.js';
 
 const RG = process.env.RG_PATH || 'rg';
 
@@ -61,7 +62,11 @@ export function parseRgMatches(stdout) {
     const text =
       raw.length > MAX_LINE_CHARS ? `${raw.slice(0, MAX_LINE_CHARS)}…` : raw;
 
-    matches.push({ relPath: toRelative(absPath), line: data.line_number, text });
+    matches.push({
+      relPath: path.relative(CORPUS_ROOT, absPath),
+      line: data.line_number,
+      text,
+    });
   }
   return matches;
 }

@@ -1,7 +1,8 @@
 // Local HTTP server that exposes the chat backend during development.
 //
-//   GET  /health       -> { status: 'ok' }           liveness check
-//   POST /chat         -> Server-Sent Events stream   the chat contract
+//   GET  /health                 -> { status: 'ok' }           liveness check
+//   GET  /materials/<file-path>  -> public PDF
+//   POST /chat                   -> Server-Sent Events stream   the chat contract
 //
 // It is a thin transport adapter: it reads the request, calls runChat, and
 // writes the result back. The same logic can later be driven by a Lambda
@@ -10,6 +11,7 @@
 import { createServer } from 'node:http';
 import { runChat } from './chat/index.js';
 import { createTrace } from './logging/index.js';
+import { serveMaterialRequest } from './materials.js';
 
 const PORT = process.env.PORT || 8787;
 
@@ -53,6 +55,13 @@ const server = createServer(async (req, res) => {
   if (req.method === 'GET' && url.pathname === '/health') {
     res.writeHead(200, { 'Content-Type': 'application/json', ...CORS_HEADERS });
     res.end(JSON.stringify({ status: 'ok' }));
+    return;
+  }
+
+  if (req.method === 'GET' && url.pathname.startsWith('/materials/')) {
+    await serveMaterialRequest(res, url.pathname, {
+      headers: CORS_HEADERS,
+    });
     return;
   }
 
