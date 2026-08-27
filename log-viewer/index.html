@@ -1,0 +1,742 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light">
+<title>Chat Log Viewer</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    display: flex;
+    height: 100vh;
+    font: 14px/1.45 system-ui, -apple-system, 'Segoe UI', sans-serif;
+    color: #1f2530;
+    background: #f6f7f9;
+  }
+  code, pre { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12px; }
+  pre {
+    margin: 0;
+    padding: 8px 10px;
+    background: #f2f4f7;
+    border: 1px solid #e2e5ea;
+    border-radius: 6px;
+    max-height: 340px;
+    overflow: auto;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+  button { font: inherit; cursor: pointer; }
+
+  /* Sidebar */
+  #sidebar {
+    width: 320px;
+    flex: none;
+    display: flex;
+    flex-direction: column;
+    background: #fff;
+    border-right: 1px solid #e2e5ea;
+  }
+  #sidebar-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 14px;
+    border-bottom: 1px solid #e2e5ea;
+  }
+  #sidebar-head h1 { margin: 0; font-size: 15px; }
+  #refresh {
+    border: 1px solid #d4d9e0;
+    background: #fff;
+    border-radius: 6px;
+    padding: 2px 9px;
+  }
+  #refresh:hover { background: #f2f4f7; }
+  #dates { overflow-y: auto; flex: 1; padding: 6px; }
+  .date-section { margin-bottom: 2px; }
+  .date-summary {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 8px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 600;
+    list-style: none;
+  }
+  .date-summary::before { content: '▸ '; color: #9aa3af; }
+  details[open] > .date-summary::before { content: '▾ '; }
+  .date-summary:hover { background: #f2f4f7; }
+  .date-summary .count {
+    font-weight: 400;
+    font-size: 12px;
+    color: #667085;
+    background: #f2f4f7;
+    border-radius: 10px;
+    padding: 0 8px;
+  }
+  .trace-row {
+    display: block;
+    width: 100%;
+    text-align: left;
+    border: 1px solid transparent;
+    background: none;
+    border-radius: 6px;
+    padding: 6px 8px 6px 20px;
+    margin: 1px 0;
+  }
+  .trace-row:hover { background: #f2f4f7; }
+  .trace-row.selected { background: #e8effc; border-color: #c4d5f6; }
+  .trace-row.disabled { opacity: 0.55; cursor: default; }
+  .trace-row .row1 { display: flex; align-items: center; gap: 7px; }
+  .trace-row .row2 { font-size: 12px; color: #667085; margin-top: 1px; }
+  .sidebar-note { padding: 6px 10px 8px 20px; color: #667085; font-size: 13px; }
+
+  /* Shared bits */
+  .dot { width: 8px; height: 8px; border-radius: 50%; flex: none; }
+  .dot.completed { background: #16a34a; }
+  .dot.failed { background: #dc2626; }
+  .dot.aborted { background: #d97706; }
+  .dot.unknown { background: #9aa3af; }
+  .badge {
+    display: inline-block;
+    padding: 1px 9px;
+    border-radius: 10px;
+    font-size: 12px;
+    font-weight: 600;
+  }
+  .badge.completed { background: #dcf3e4; color: #15703c; }
+  .badge.failed { background: #fbe0e0; color: #a52222; }
+  .badge.aborted { background: #fceccf; color: #90570c; }
+  .badge.unknown { background: #eceef1; color: #4b5563; }
+  .chip {
+    display: inline-block;
+    padding: 1px 8px;
+    border-radius: 10px;
+    font-size: 12px;
+    background: #eceef1;
+    color: #374151;
+  }
+  .chip.warn { background: #fceccf; color: #90570c; }
+  .chip.bad { background: #fbe0e0; color: #a52222; }
+  .error-line { color: #a52222; font-size: 13px; margin: 4px 0; }
+  .note { color: #667085; font-size: 13px; }
+
+  /* Detail pane */
+  #detail { flex: 1; overflow-y: auto; padding: 18px 22px; }
+  .empty { color: #667085; padding: 40px; text-align: center; }
+  .empty.error { color: #a52222; }
+  .trace-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+  .trace-head h2 { margin: 0; font-size: 17px; margin-right: 4px; }
+  .trace-head .spacer { flex: 1; }
+  #raw-toggle {
+    border: 1px solid #d4d9e0;
+    background: #fff;
+    border-radius: 6px;
+    padding: 3px 11px;
+  }
+  #raw-toggle:hover { background: #f2f4f7; }
+  .stats { display: flex; flex-wrap: wrap; gap: 4px 18px; margin: 10px 0 4px; font-size: 13px; }
+  .stat-label { color: #667085; margin-right: 5px; }
+  .stat code { cursor: copy; }
+  section.panel {
+    background: #fff;
+    border: 1px solid #e2e5ea;
+    border-radius: 8px;
+    padding: 12px 14px;
+    margin-top: 14px;
+  }
+  section.panel > h3 { margin: 0 0 8px; font-size: 13px; text-transform: uppercase; letter-spacing: 0.04em; color: #667085; }
+
+  .bubble { border: 1px solid #e2e5ea; border-radius: 8px; padding: 8px 11px; margin: 8px 0; background: #fff; }
+  .bubble.user { background: #f2f4f7; }
+  .bubble.assistant { border-color: #c4d5f6; }
+  .bubble .role { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: #667085; margin-bottom: 3px; }
+  .prewrap { white-space: pre-wrap; overflow-wrap: anywhere; }
+
+  .round { border: 1px solid #e2e5ea; border-left: 3px solid #2563eb; border-radius: 8px; background: #fff; padding: 10px 13px; margin: 10px 0; }
+  .round.incomplete { border-left-color: #d97706; }
+  .round-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 14px; }
+  .round-head .meta { color: #667085; font-size: 13px; }
+
+  details.box { margin: 7px 0 0; }
+  details.box > summary {
+    cursor: pointer;
+    font-size: 13px;
+    color: #2563eb;
+    list-style: none;
+  }
+  details.box > summary::before { content: '▸ '; }
+  details.box[open] > summary::before { content: '▾ '; }
+  details.box > *:not(summary) { margin-top: 6px; }
+  .link-btn { border: none; background: none; color: #2563eb; padding: 0; font-size: 13px; margin-top: 6px; }
+  .link-btn:hover { text-decoration: underline; }
+
+  .pitem { border-top: 1px dashed #e2e5ea; padding: 6px 0; }
+  .pitem:first-child { border-top: none; }
+  .pitem-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: #8a93a3; margin-bottom: 3px; }
+  .nested { margin-left: 14px; }
+
+  .tool { border: 1px solid #e2e5ea; border-radius: 7px; padding: 7px 10px; margin: 8px 0; background: #fbfcfd; }
+  .tool.failed { border-color: #eebcbc; background: #fdf7f7; }
+  .tool.unfinished { border-color: #ecd3a8; }
+  .tool-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+  .tool-name { background: #e4ecfb; color: #1d4fbb; font-weight: 600; }
+  .tool-name[data-tool="read_file"] { background: #ddf3e4; color: #1a7f42; }
+  .tool-name[data-tool="list_sources"] { background: #f1e7fb; color: #7c3aad; }
+  .tool-label { font-size: 13px; overflow-wrap: anywhere; }
+  .tool-head .meta { color: #667085; font-size: 12px; }
+
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  a.chip.citation { text-decoration: none; }
+  a.chip.citation:hover { background: #e4ecfb; }
+
+  #raw { display: none; margin-top: 14px; max-height: none; }
+</style>
+</head>
+<body>
+<aside id="sidebar">
+  <div id="sidebar-head">
+    <h1>Chat traces</h1>
+    <button id="refresh" title="Reload the trace list">↻</button>
+  </div>
+  <div id="dates"></div>
+</aside>
+<main id="detail">
+  <div class="empty">Select a trace from the sidebar.</div>
+</main>
+
+<script>
+'use strict';
+
+const $ = (id) => document.getElementById(id);
+
+function el(tag, className, text) {
+  const node = document.createElement(tag);
+  if (className) node.className = className;
+  if (text !== undefined) node.textContent = text;
+  return node;
+}
+
+const pre = (text) => el('pre', '', text);
+const preWrap = (text) => el('div', 'prewrap', text);
+
+function fmtMs(ms) {
+  if (ms == null) return '–';
+  return ms >= 1000 ? `${(ms / 1000).toFixed(1)}s` : `${ms}ms`;
+}
+
+function fmtTime(iso) {
+  const date = new Date(iso);
+  return Number.isNaN(date.getTime()) ? String(iso) : date.toLocaleTimeString('en-GB');
+}
+
+function fmtBytes(bytes) {
+  if (bytes == null) return '';
+  return bytes >= 1024 ? `${Math.round(bytes / 1024)} KB` : `${bytes} B`;
+}
+
+// Pretty-print with base64 reasoning blobs replaced by a placeholder.
+function prettyJson(value) {
+  return JSON.stringify(
+    value,
+    (key, v) => (key === 'encrypted_content' && typeof v === 'string'
+      ? `[encrypted, ${v.length} chars]`
+      : v),
+    2,
+  );
+}
+
+async function fetchJson(url) {
+  const response = await fetch(url);
+  if (!response.ok) throw new Error(`HTTP ${response.status}`);
+  return response.json();
+}
+
+function lazyDetails(label, build) {
+  const details = el('details', 'box');
+  details.append(el('summary', '', label));
+  let built = false;
+  details.addEventListener('toggle', () => {
+    if (!details.open || built) return;
+    built = true;
+    details.append(build());
+  });
+  return details;
+}
+
+/* ---------- sidebar ---------- */
+
+let selectedRow = null;
+
+async function loadDates() {
+  const container = $('dates');
+  container.replaceChildren(el('div', 'sidebar-note', 'Loading…'));
+  try {
+    const { dates } = await fetchJson('/api/dates');
+    container.replaceChildren();
+    if (!dates.length) {
+      container.append(el('div', 'sidebar-note', 'No traces found. Enable logging with CHAT_LOG_MODE and send a chat request.'));
+      return;
+    }
+    dates.forEach((entry, index) => container.append(dateSection(entry, index === 0)));
+  } catch (error) {
+    container.replaceChildren(el('div', 'sidebar-note error-line', `Failed to load dates: ${error.message}`));
+  }
+}
+
+function dateSection({ date, traceCount }, openByDefault) {
+  const details = el('details', 'date-section');
+  const summary = el('summary', 'date-summary');
+  summary.append(el('span', '', date), el('span', 'count', String(traceCount)));
+  const list = el('div', 'trace-list');
+  details.append(summary, list);
+
+  let loaded = false;
+  details.addEventListener('toggle', async () => {
+    if (!details.open || loaded) return;
+    loaded = true;
+    list.replaceChildren(el('div', 'sidebar-note', 'Loading…'));
+    try {
+      const { traces } = await fetchJson(`/api/traces/${date}`);
+      list.replaceChildren();
+      if (!traces.length) list.append(el('div', 'sidebar-note', 'No traces.'));
+      for (const trace of traces) list.append(traceRow(date, trace));
+    } catch (error) {
+      list.replaceChildren(el('div', 'sidebar-note error-line', error.message));
+    }
+  });
+  if (openByDefault) details.open = true;
+  return details;
+}
+
+function traceRow(date, entry) {
+  const row = el('button', 'trace-row');
+  if (entry.parseError) {
+    row.classList.add('disabled');
+    row.disabled = true;
+    row.title = entry.parseError;
+    row.append(el('div', 'row1', entry.requestId || '(unnamed)'));
+    row.append(el('div', 'row2', 'unreadable trace'));
+    return row;
+  }
+
+  const row1 = el('div', 'row1');
+  row1.append(el('span', `dot ${entry.status}`));
+  row1.append(el('strong', '', fmtTime(entry.startedAt)));
+  row1.append(el('span', '', entry.model || '(no model)'));
+  const row2 = el('div', 'row2',
+    [
+      fmtMs(entry.durationMs),
+      `R${entry.providerRoundCount} T${entry.toolCallCount} C${entry.citationCount}`,
+      entry.mode,
+      fmtBytes(entry.sizeBytes),
+    ].filter(Boolean).join(' · '));
+  row.append(row1, row2);
+  row.title = entry.requestId;
+  row.addEventListener('click', () => {
+    if (selectedRow) selectedRow.classList.remove('selected');
+    selectedRow = row;
+    row.classList.add('selected');
+    selectTrace(date, entry.requestId);
+  });
+  return row;
+}
+
+/* ---------- trace detail ---------- */
+
+async function selectTrace(date, requestId) {
+  const detail = $('detail');
+  detail.replaceChildren(el('div', 'empty', 'Loading…'));
+  try {
+    const response = await fetch(`/api/trace/${date}/${requestId}`);
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const raw = await response.text();
+    detail.replaceChildren(renderDetail(JSON.parse(raw), raw));
+  } catch (error) {
+    detail.replaceChildren(el('div', 'empty error', `Failed to load trace: ${error.message}`));
+  }
+}
+
+function renderDetail(record, raw) {
+  const wrap = el('div', 'trace');
+
+  const head = el('div', 'trace-head');
+  head.append(el('h2', '', record.request?.model || '(no model)'));
+  head.append(el('span', `badge ${record.status || 'unknown'}`, record.status || 'unknown'));
+  if (record.mode) head.append(el('span', 'chip', record.mode));
+  if (record.summary?.maxToolRoundsReached) head.append(el('span', 'chip warn', 'tool rounds exhausted'));
+  head.append(el('span', 'spacer'));
+  const rawToggle = el('button', '', 'Raw JSON');
+  rawToggle.id = 'raw-toggle';
+  head.append(rawToggle);
+  wrap.append(head);
+
+  const summary = record.summary || {};
+  const stats = el('div', 'stats');
+  const stat = (label, value) => {
+    const span = el('span', 'stat');
+    span.append(el('span', 'stat-label', label), document.createTextNode(value));
+    return span;
+  };
+  const id = el('span', 'stat');
+  const idCode = el('code', '', record.requestId || '?');
+  idCode.title = 'Click to copy';
+  idCode.addEventListener('click', async () => {
+    await navigator.clipboard.writeText(record.requestId || '');
+    idCode.textContent = 'copied!';
+    setTimeout(() => { idCode.textContent = record.requestId; }, 800);
+  });
+  id.append(el('span', 'stat-label', 'request'), idCode);
+  stats.append(id);
+  stats.append(stat('started', record.startedAt || '?'));
+  stats.append(stat('duration', fmtMs(summary.durationMs)));
+  stats.append(stat('tokens', `${summary.inputTokens ?? 0} in / ${summary.outputTokens ?? 0} out`));
+  stats.append(stat('rounds', String(summary.providerRoundCount ?? 0)));
+  stats.append(stat('tool calls', String(summary.toolCallCount ?? 0)));
+  stats.append(stat('citations', String(summary.citationCount ?? 0)));
+  wrap.append(stats);
+
+  const content = el('div');
+  content.append(renderConversation(record));
+  const { rounds, citations, requestEvent } = groupEvents(record.events || []);
+  content.append(renderTimeline(rounds, requestEvent));
+  if (citations.length) content.append(renderCitations(citations));
+  wrap.append(content);
+
+  const rawPre = pre(raw);
+  rawPre.id = 'raw';
+  wrap.append(rawPre);
+  rawToggle.addEventListener('click', () => {
+    const showRaw = rawPre.style.display !== 'block';
+    rawPre.style.display = showRaw ? 'block' : 'none';
+    content.style.display = showRaw ? 'none' : 'block';
+    rawToggle.textContent = showRaw ? 'Formatted view' : 'Raw JSON';
+  });
+
+  return wrap;
+}
+
+function bubble(role, text) {
+  const div = el('div', `bubble ${role.split(' ')[0]}`);
+  div.append(el('div', 'role', role));
+  div.append(preWrap(text));
+  return div;
+}
+
+function renderConversation(record) {
+  const section = el('section', 'panel');
+  section.append(el('h3', '', 'Conversation'));
+  const messages = record.request?.messages;
+  if (!Array.isArray(messages)) {
+    const count = record.request?.messageCount ?? 0;
+    section.append(el('div', 'note',
+      record.mode === 'metadata'
+        ? `Metadata mode — no message content recorded (${count} client messages).`
+        : `No messages recorded (${count} client messages).`));
+    return section;
+  }
+  for (const message of messages) {
+    const text = typeof message.content === 'string' ? message.content : prettyJson(message.content);
+    section.append(bubble(message.role || 'message', text));
+  }
+  const answer = record.summary?.assistantResponse;
+  if (answer !== undefined) {
+    section.append(bubble('assistant · streamed answer', answer === '' ? '(empty)' : answer));
+  }
+  return section;
+}
+
+/* ---------- events ---------- */
+
+// One ordered walk. A round group stays current after its completed event so
+// the tool calls that run before the next round attach to the round that
+// requested them. Aborted traces leave the last round incomplete — expected.
+function groupEvents(events) {
+  const rounds = [];
+  const citations = [];
+  let current = null;
+  let requestEvent = null;
+  for (const event of events) {
+    if (event.type === 'provider.round.started') {
+      current = { round: event.providerRound, started: event, completed: null, tools: [] };
+      rounds.push(current);
+    } else if (event.type === 'provider.round.completed') {
+      if (current && current.round === event.providerRound && !current.completed) {
+        current.completed = event;
+      } else {
+        rounds.push({ stray: event });
+      }
+    } else if (event.type === 'citation.selected') {
+      citations.push(event.citation);
+    } else if (event.type.startsWith('request.')) {
+      requestEvent = event;
+    } else if (event.type.startsWith('tool.') && current) {
+      current.tools.push(event);
+    } else {
+      rounds.push({ stray: event });
+    }
+  }
+  return { rounds, citations, requestEvent };
+}
+
+function renderTimeline(rounds, requestEvent) {
+  const section = el('section', 'panel');
+  section.append(el('h3', '', 'Timeline'));
+  if (!rounds.length && !requestEvent) section.append(el('div', 'note', 'No events recorded.'));
+
+  let previousLength = 0;
+  for (const group of rounds) {
+    if (group.stray) {
+      section.append(lazyDetails(`event · ${group.stray.type}`, () => pre(prettyJson(group.stray))));
+      continue;
+    }
+    const { node, requestItems } = renderRound(group, previousLength);
+    if (requestItems != null) previousLength = requestItems;
+    section.append(node);
+  }
+
+  if (requestEvent) section.append(renderRequestEvent(requestEvent));
+  return section;
+}
+
+function renderRound(group, previousLength) {
+  const completed = group.completed;
+  const node = el('div', `round${completed ? '' : ' incomplete'}`);
+
+  const head = el('div', 'round-head');
+  head.append(el('strong', '', `Round ${group.round}`));
+  if (completed) {
+    head.append(el('span', 'meta', fmtMs(completed.durationMs)));
+    head.append(el('span', 'meta', `${completed.inputTokens ?? 0} in / ${completed.outputTokens ?? 0} out tokens`));
+    if (completed.stopReason) head.append(el('span', 'meta', `stop: ${completed.stopReason}`));
+    else if (completed.status) head.append(el('span', 'meta', `response status: ${completed.status}`));
+    if (completed.toolCallCount != null) head.append(el('span', 'meta', `${completed.toolCallCount} tool calls`));
+  } else {
+    head.append(el('span', 'chip warn', 'incomplete — no response recorded'));
+  }
+  node.append(head);
+
+  let requestItems = null;
+  const modelRequest = group.started?.modelRequest;
+  if (modelRequest) {
+    const items = modelRequest.input || modelRequest.messages || [];
+    requestItems = items.length;
+    const fresh = items.slice(previousLength);
+    const label = `model request · ${items.length} items`
+      + (previousLength > 0 ? ` (+${fresh.length} since last round)` : '');
+    node.append(lazyDetails(label, () => {
+      const box = el('div');
+      for (const item of fresh) box.append(renderProviderItem(item));
+      const full = el('button', 'link-btn', 'Show full request JSON');
+      full.addEventListener('click', () => box.replaceChildren(pre(prettyJson(modelRequest))));
+      box.append(full);
+      return box;
+    }));
+  }
+
+  if (completed?.modelResponse) {
+    node.append(lazyDetails(`model response · ${completed.modelResponse.length} items`, () => {
+      const box = el('div');
+      for (const item of completed.modelResponse) box.append(renderProviderItem(item));
+      return box;
+    }));
+  }
+
+  for (const card of pairTools(group.tools)) node.append(renderToolCard(card));
+  return { node, requestItems };
+}
+
+// Pair tool.started with its completed/failed event by per-tool FIFO order.
+// Unmatched started events (aborted traces) become "unfinished" cards.
+function pairTools(events) {
+  const cards = [];
+  const open = new Map();
+  for (const event of events) {
+    if (event.type === 'tool.started') {
+      const card = { started: event, finished: null };
+      cards.push(card);
+      if (!open.has(event.toolName)) open.set(event.toolName, []);
+      open.get(event.toolName).push(card);
+    } else {
+      const queue = open.get(event.toolName);
+      const card = queue?.length ? queue.shift() : null;
+      if (card) card.finished = event;
+      else cards.push({ started: null, finished: event });
+    }
+  }
+  return cards;
+}
+
+function renderToolCard(card) {
+  const { started, finished } = card;
+  const failed = finished?.type === 'tool.failed';
+  const name = started?.toolName || finished?.toolName || 'tool';
+  const div = el('div', `tool${failed ? ' failed' : finished ? '' : ' unfinished'}`);
+
+  const head = el('div', 'tool-head');
+  const nameChip = el('span', 'chip tool-name', name);
+  nameChip.dataset.tool = name;
+  head.append(nameChip);
+  const query = started?.arguments?.query;
+  const label = query ? `“${query}”` : (finished?.filePath || started?.filePath || '');
+  if (label) head.append(el('span', 'tool-label', label));
+  if (finished?.durationMs != null) head.append(el('span', 'meta', fmtMs(finished.durationMs)));
+  if (finished?.resultCount != null) head.append(el('span', 'meta', `${finished.resultCount} results`));
+  if (finished?.truncated) head.append(el('span', 'chip warn', 'truncated'));
+  if (!finished) head.append(el('span', 'chip warn', 'unfinished'));
+  if (failed) head.append(el('span', 'chip bad', finished.errorName || 'failed'));
+  div.append(head);
+
+  if (started?.arguments) {
+    div.append(lazyDetails('arguments', () => pre(prettyJson(started.arguments))));
+  }
+  if (failed) {
+    div.append(el('div', 'error-line', finished.errorMessage || 'unknown error'));
+    if (finished.stack) div.append(lazyDetails('stack', () => pre(finished.stack)));
+  } else if (typeof finished?.result === 'string') {
+    div.append(lazyDetails('result', () => renderToolResult(name, finished.result)));
+  }
+  return div;
+}
+
+// tool.completed.result is a string whose format depends on the tool:
+// JSON {hits[],truncated} for search_corpus, a JSON array for list_sources,
+// plain text for read_file. Fall back to the raw string on parse failure.
+function renderToolResult(toolName, result) {
+  if (toolName === 'search_corpus' || toolName === 'list_sources') {
+    try {
+      const parsed = JSON.parse(result);
+      if (toolName === 'search_corpus' && Array.isArray(parsed.hits)) {
+        const box = el('div');
+        for (const hit of parsed.hits) {
+          const item = el('div', 'pitem');
+          item.append(el('code', '', `${hit.path}:${hit.line}`));
+          item.append(preWrap(hit.text ?? ''));
+          box.append(item);
+        }
+        if (!parsed.hits.length) box.append(el('div', 'note', 'No hits.'));
+        if (parsed.truncated) box.append(el('div', 'note', 'More results were truncated.'));
+        return box;
+      }
+      return pre(prettyJson(parsed));
+    } catch {
+      // fall through to the raw string
+    }
+  }
+  return pre(result);
+}
+
+// Render one provider conversation/output item: an Anthropic message or
+// content block, or an OpenAI Responses input/output item.
+function renderProviderItem(item) {
+  const box = el('div', 'pitem');
+  const add = (label, node) => {
+    box.append(el('div', 'pitem-label', label));
+    if (node) box.append(node);
+  };
+
+  if (item === null || typeof item !== 'object') {
+    add('item', preWrap(String(item)));
+    return box;
+  }
+  if (item.type === undefined && item.role !== undefined) {
+    add(item.role);
+    box.append(contentNode(item.content));
+    return box;
+  }
+
+  switch (item.type) {
+    case 'text':
+      add('text', preWrap(item.text ?? ''));
+      break;
+    case 'thinking':
+      add('thinking', preWrap(item.thinking ?? ''));
+      break;
+    case 'reasoning': {
+      const summaries = (item.summary || []).map((s) => s?.text).filter(Boolean).join('\n\n');
+      const encrypted = typeof item.encrypted_content === 'string'
+        ? `[encrypted reasoning, ${item.encrypted_content.length} chars]`
+        : '';
+      add('reasoning', preWrap([summaries, encrypted].filter(Boolean).join('\n') || '(empty)'));
+      break;
+    }
+    case 'tool_use':
+      add(`tool_use · ${item.name}`, pre(prettyJson(item.input)));
+      break;
+    case 'function_call': {
+      let args = item.arguments ?? '';
+      try {
+        args = prettyJson(JSON.parse(item.arguments));
+      } catch {
+        // keep the raw string
+      }
+      add(`function_call · ${item.name}`, pre(args));
+      break;
+    }
+    case 'function_call_output':
+      add('function_call_output', pre(item.output ?? ''));
+      break;
+    case 'tool_result':
+      add('tool_result', contentNode(item.content));
+      break;
+    case 'message':
+      add(`message · ${item.role || ''}`);
+      box.append(contentNode(item.content));
+      break;
+    default:
+      add(item.type || 'item', pre(prettyJson(item)));
+  }
+  return box;
+}
+
+function contentNode(content) {
+  if (typeof content === 'string') return preWrap(content);
+  if (Array.isArray(content)) {
+    const nested = el('div', 'nested');
+    for (const block of content) nested.append(renderProviderItem(block));
+    return nested;
+  }
+  return pre(prettyJson(content));
+}
+
+function renderRequestEvent(event) {
+  const status = event.type.slice('request.'.length);
+  const div = el('div', `round${status === 'completed' ? '' : ' incomplete'}`);
+  const head = el('div', 'round-head');
+  head.append(el('span', `badge ${status}`, `request ${status}`));
+  head.append(el('span', 'meta', fmtMs(event.durationMs)));
+  div.append(head);
+  if (event.error) {
+    div.append(el('div', 'error-line', `${event.error.name || 'Error'}: ${event.error.message || ''}`));
+    if (event.error.stack) div.append(lazyDetails('stack', () => pre(event.error.stack)));
+  }
+  return div;
+}
+
+function renderCitations(citations) {
+  const section = el('section', 'panel');
+  section.append(el('h3', '', 'Citations'));
+  const chips = el('div', 'chips');
+  for (const citation of citations || []) {
+    if (!citation) continue;
+    const chip = el('a', 'chip citation', [citation.source, citation.title].filter(Boolean).join(' · ') || '(citation)');
+    chip.title = [citation.type, citation.url].filter(Boolean).join(' — ');
+    if (citation.url) {
+      // Internal frontend routes open against the local Vite dev server.
+      chip.href = citation.url.startsWith('/') ? `http://localhost:5173${citation.url}` : citation.url;
+      chip.target = '_blank';
+      chip.rel = 'noopener';
+    }
+    chips.append(chip);
+  }
+  section.append(chips);
+  return section;
+}
+
+$('refresh').addEventListener('click', loadDates);
+loadDates();
+</script>
+</body>
+</html>

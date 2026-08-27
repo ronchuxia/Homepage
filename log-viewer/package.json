@@ -1,0 +1,11 @@
+{
+  "name": "homepage-log-viewer",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Local viewer for chat backend request traces.",
+  "scripts": {
+    "start": "node server.mjs",
+    "dev": "node --watch server.mjs"
+  }
+}
