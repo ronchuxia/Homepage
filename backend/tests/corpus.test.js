@@ -3,10 +3,9 @@ import { test } from 'node:test';
 
 import {
   buildCitation,
-  resolveScopeRoots,
+  resolveScopeSources,
   safeRelPath,
   sourceForPath,
-  validateSearchPath,
 } from '../src/corpus.js';
 
 const sources = [
@@ -25,6 +24,7 @@ const sources = [
     },
   },
   {
+    id: 'profile/resume',
     type: 'materials',
     root: 'search/materials/profile/resume',
     citation: {
@@ -51,19 +51,18 @@ test('safeRelPath rejects missing, absolute, invalid, and escaping paths', () =>
   assert.throws(() => safeRelPath('../outside.txt'), /path escapes the corpus/);
 });
 
-test('resolveScopeRoots selects source groups and source identifiers', () => {
-  assert.deepEqual(resolveScopeRoots('all', sources), [
-    'search/notes',
-    'search/github/workspace',
-    'search/materials/profile/resume',
-    'search/websites/portfolio',
-  ]);
-  assert.deepEqual(resolveScopeRoots('notes', sources), ['search/notes']);
-  assert.deepEqual(resolveScopeRoots('github', sources), ['search/github/workspace']);
-  assert.deepEqual(resolveScopeRoots('materials', sources), ['search/materials/profile/resume']);
-  assert.deepEqual(resolveScopeRoots('websites', sources), ['search/websites/portfolio']);
-  assert.deepEqual(resolveScopeRoots('workspace', sources), ['search/github/workspace']);
-  assert.deepEqual(resolveScopeRoots('missing', sources), []);
+test('resolveScopeSources selects every source without a scope, one source by id', () => {
+  assert.deepEqual(resolveScopeSources(undefined, sources), sources);
+  assert.deepEqual(resolveScopeSources('notes', sources), [sources[0]]);
+  assert.deepEqual(resolveScopeSources('workspace', sources), [sources[1]]);
+  assert.deepEqual(resolveScopeSources('profile/resume', sources), [sources[2]]);
+});
+
+test('resolveScopeSources rejects unknown scopes', () => {
+  assert.throws(() => resolveScopeSources('missing', sources), /unknown scope/);
+  assert.throws(() => resolveScopeSources('all', sources), /unknown scope/);
+  assert.throws(() => resolveScopeSources('github', sources), /unknown scope/);
+  assert.throws(() => resolveScopeSources('search/github/workspace/src', sources), /unknown scope/);
 });
 
 test('sourceForPath chooses the longest matching source root', () => {
@@ -82,14 +81,6 @@ test('sourceForPath chooses the longest matching source root', () => {
     'nested',
   );
   assert.equal(sourceForPath('unknown/file.txt', nestedSources), null);
-});
-
-test('validateSearchPath rejects paths outside search roots', () => {
-  assert.equal(validateSearchPath('search/notes/Robotics/Test.md', sources).id, 'notes');
-  assert.throws(
-    () => validateSearchPath('materials/profile/resume.pdf', sources),
-    /path is not in a search root/,
-  );
 });
 
 test('buildCitation creates internal note links', () => {

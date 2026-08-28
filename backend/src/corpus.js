@@ -44,25 +44,19 @@ export async function loadSources() {
   return cachedSources;
 }
 
-// Map a request scope to the corpus-relative roots to search. A scope can be
-// "all", a source-type group, or a source id.
-export function resolveScopeRoots(scope, sources) {
-  if (!scope || scope === 'all') {
-    return sources.map((source) => source.root);
+// Resolve a request scope to the sources to search: every source when scope
+// is empty, else the source with that id.
+export function resolveScopeSources(scope, sources) {
+  if (!scope) {
+    return sources;
   }
-  if (scope === 'notes') {
-    return sources.filter((s) => s.type === 'notes').map((s) => s.root);
+  const matched = sources.filter((s) => s.id === scope);
+  if (matched.length === 0) {
+    throw new Error(
+      'unknown scope: use a source id from list_sources, or omit scope to search all sources',
+    );
   }
-  if (scope === 'github') {
-    return sources.filter((s) => s.type === 'github').map((s) => s.root);
-  }
-  if (scope === 'materials') {
-    return sources.filter((s) => s.type === 'materials').map((s) => s.root);
-  }
-  if (scope === 'websites') {
-    return sources.filter((s) => s.type === 'websites').map((s) => s.root);
-  }
-  return sources.filter((s) => s.id === scope).map((s) => s.root);
+  return matched;
 }
 
 // The source whose root is the longest matching prefix of a corpus path.
@@ -76,14 +70,6 @@ export function sourceForPath(relPath, sources) {
     }
   }
   return best;
-}
-
-export function validateSearchPath(relPath, sources) {
-  const source = sourceForPath(relPath, sources);
-  if (!source) {
-    throw new Error('path is not in a search root');
-  }
-  return source;
 }
 
 // Build a display citation for a hit, using the owning source's citation rule.

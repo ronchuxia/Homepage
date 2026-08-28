@@ -9,8 +9,8 @@ import { CORPUS_ROOT } from '../corpus.js';
 
 const RG = process.env.RG_PATH || 'rg';
 
-export const DEFAULT_LIMIT = 20;
-export const MAX_LIMIT = 50;
+export const DEFAULT_LIMIT = 50;
+export const MAX_LIMIT = 500;
 export const DEFAULT_READ_LINES = 80;
 export const MAX_READ_LINES = 400;
 const MAX_LINE_CHARS = 300;
@@ -78,9 +78,51 @@ export const rgCorpusFlags = ['--hidden', '--no-ignore'];
 
 export const rgSearchFlags = [
   '--json',
-  '--smart-case',
+  '--ignore-case',
+  '--fixed-strings',
   '--max-columns',
   '500',
   '--max-columns-preview',
   ...rgCorpusFlags,
 ];
+
+// Split a query into keywords: keywords separated by whitespace, double-quoted spans
+// as one keyword.
+export function tokenizeQuery(query) {
+  return [...query.matchAll(/"([^"]+)"|(\S+)/g)].map((m) => m[1] ?? m[2]);
+}
+
+// Order matches for relevance: group by file, rank files by how many distinct
+// keywords their matched lines contain, tie-break by total match count.
+export function rankMatches(matches, keywords) {
+  const lowered = keywords.map((keyword) => keyword.toLowerCase());
+  const byFile = Map.groupBy(matches, (match) => match.relPath);
+  const files = [...byFile.values()].map((fileMatches) => {
+    const texts = fileMatches.map((m) => m.text.toLowerCase());
+    const coverage = lowered.filter((k) => texts.some((t) => t.includes(k))).length;
+    return { coverage, fileMatches };
+  });
+  files.sort(
+    (a, b) => b.coverage - a.coverage || b.fileMatches.length - a.fileMatches.length,
+  );
+  return files.flatMap((f) => f.fileMatches);
+}
+
+// Keep only the paths that contain at least one keyword.
+export function filterPathMatches(paths, keywords) {
+  const lowered = keywords.map((keyword) => keyword.toLowerCase());
+  return paths.filter((p) => lowered.some((k) => p.toLowerCase().includes(k)));
+}
+
+// Rank paths by how many distinct keywords they contain.
+export function rankPathMatches(paths, keywords) {
+  const lowered = keywords.map((keyword) => keyword.toLowerCase());
+  const scored = paths.map((p) => ({
+    p,
+    coverage: lowered.filter((k) => p.toLowerCase().includes(k)).length,
+  }));
+  scored.sort(
+    (a, b) => b.coverage - a.coverage
+  );
+  return scored.map((entry) => entry.p);
+}

@@ -34,22 +34,24 @@ async function runTool(block, cite, toolRound, trace) {
 
   try {
     if (block.name === 'search_corpus') {
-      const { hits, truncated } = await searchCorpus({
+      const { contentHits, pathHits, truncated, hint } = await searchCorpus({
         query: block.input.query,
         scope: block.input.scope,
         limit: block.input.limit,
       });
-      for (const hit of hits) {
+      for (const hit of contentHits) {
         if (hit.citation.url) cite.search.set(hit.path, hit.citation);
       }
       const result = {
         content: JSON.stringify({
-          hits: hits.map((hit) => ({
+          contentHits: contentHits.map((hit) => ({
             path: hit.path,
             line: hit.line,
             text: hit.text,
           })),
+          pathHits,
           truncated,
+          ...(hint ? { hint } : {}),
         }),
       };
       trace.appendEvent(
@@ -57,7 +59,8 @@ async function runTool(block, cite, toolRound, trace) {
         {
           ...metadata,
           durationMs: Date.now() - started,
-          resultCount: hits.length,
+          contentHitCount: contentHits.length,
+          pathHitCount: pathHits.length,
           truncated: truncated,
         },
         { result: result.content },

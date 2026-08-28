@@ -8,14 +8,17 @@ import {
   CORPUS_ROOT,
   loadSources,
   safeRelPath,
-  validateSearchPath,
+  sourceForPath,
 } from '../corpus.js';
 import { DEFAULT_READ_LINES, MAX_READ_LINES, clamp } from './shared.js';
 
 export async function readFileWindow({ path: filePath, startLine, lineCount } = {}) {
   const relPath = safeRelPath(filePath);
   const sources = await loadSources();
-  validateSearchPath(relPath, sources);
+  const source = sourceForPath(relPath, sources);
+  if (!source) {
+    throw new Error('path is not in a search root');
+  }
 
   const abs = path.join(CORPUS_ROOT, relPath);
   let content;

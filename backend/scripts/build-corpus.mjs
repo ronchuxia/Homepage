@@ -95,6 +95,7 @@ async function buildCorpus(corpusRoot, workDir, config) {
           const parsedPath = trackedFile.replace(/\.pdf$/i, '');
           await extractPdf(corpusRoot, trackedFile, parsedPath);
           registry.push({
+            id: parsedPath,
             type: source.type,
             root: `search/materials/${parsedPath}`,
             revision: { repo: source.url, sha },

@@ -584,6 +584,8 @@ function renderToolCard(card) {
   if (label) head.append(el('span', 'tool-label', label));
   if (finished?.durationMs != null) head.append(el('span', 'meta', fmtMs(finished.durationMs)));
   if (finished?.resultCount != null) head.append(el('span', 'meta', `${finished.resultCount} results`));
+  if (finished?.contentHitCount != null) head.append(el('span', 'meta', `${finished.contentHitCount} content hits`));
+  if (finished?.pathHitCount != null) head.append(el('span', 'meta', `${finished.pathHitCount} path hits`));
   if (finished?.truncated) head.append(el('span', 'chip warn', 'truncated'));
   if (!finished) head.append(el('span', 'chip warn', 'unfinished'));
   if (failed) head.append(el('span', 'chip bad', finished.errorName || 'failed'));

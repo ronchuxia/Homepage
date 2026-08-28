@@ -6,17 +6,21 @@ export const TOOLS = [
   {
     name: 'search_corpus',
     description:
-      "Search Xia's corpus of notes, GitHub source, materials, and websites. Call this before answering any factual question about Xia's work. Returns matching files with line numbers and snippets.",
+      "Search Xia's corpus of notes, GitHub source, materials, and websites. Keywords are matched against file content and file paths, literally and case-insensitively. Files are ranked by how many distinct keywords they match. Returns contentHits (lines matching keywords) and pathHits (paths matching keywords).",
     input_schema: {
       type: 'object',
       properties: {
-        query: { type: 'string', description: 'The search query (keywords or a phrase).' },
+        query: {
+          type: 'string',
+          description:
+            'Space-separated keywords, OR\'d. Wrap a multi-word phrase in double quotes to match it exactly.',
+        },
         scope: {
           type: 'string',
           description:
-            "Where to search: 'all' (default), 'notes', 'github', 'materials', 'websites', or a source identifier.",
+            'Optional: a source id from list_sources to search only that source. Omit to search all sources.',
         },
-        limit: { type: 'integer', description: 'Max results (default 20).' },
+        limit: { type: 'integer', description: 'Max results per list (default 50, max 500).' },
       },
       required: ['query'],
     },
@@ -37,11 +41,15 @@ export const TOOLS = [
   },
   {
     name: 'list_sources',
-    description: 'List the sources in the corpus and their sizes.',
+    description:
+      "List the sources in the corpus. Returns each source's id and root path. Setting scope to a source id also returns that source's file paths.",
     input_schema: {
       type: 'object',
       properties: {
-        scope: { type: 'string', description: "Optional: 'all', 'notes', 'github', 'materials', 'websites', or a source identifier." },
+        scope: {
+          type: 'string',
+          description: "Optional: a source id from list_sources to list only that source. Omit to list all sources.",
+        },
       },
     },
   },

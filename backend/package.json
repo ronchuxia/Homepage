@@ -4,6 +4,9 @@
   "private": true,
   "type": "module",
   "description": "Multi-provider chat backend for the homepage AI agent.",
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "dev": "node --watch --env-file-if-exists=.env.local src/server.js",
     "start": "node --env-file-if-exists=.env.local src/server.js",

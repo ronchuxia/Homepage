@@ -5,7 +5,11 @@ import { test } from 'node:test';
 import { CORPUS_ROOT } from '../src/corpus.js';
 import {
   clamp,
+  filterPathMatches,
   parseRgMatches,
+  rankMatches,
+  rankPathMatches,
+  tokenizeQuery,
 } from '../src/tools/shared.js';
 
 test('clamp applies bounds and a fallback', () => {
@@ -33,5 +37,42 @@ test('parseRgMatches extracts valid matches and ignores other lines', () => {
       line: 7,
       text: 'matching text',
     },
+  ]);
+});
+
+test('tokenizeQuery splits on whitespace and keeps quoted phrases whole', () => {
+  assert.deepEqual(tokenizeQuery('robot slam'), ['robot', 'slam']);
+  assert.deepEqual(tokenizeQuery('"pure pursuit" raceline'), ['pure pursuit', 'raceline']);
+  assert.deepEqual(tokenizeQuery('   '), []);
+});
+
+test('rankMatches ranks files by keyword coverage, then by match count', () => {
+  const matches = [
+    { relPath: 'a.md', line: 1, text: 'alpha' },
+    { relPath: 'a.md', line: 2, text: 'alpha again' },
+    { relPath: 'a.md', line: 3, text: 'alpha third' },
+    { relPath: 'b.md', line: 1, text: 'Alpha and BETA' },
+    { relPath: 'c.md', line: 1, text: 'beta' },
+    { relPath: 'c.md', line: 2, text: 'beta two' },
+  ];
+  assert.deepEqual(
+    rankMatches(matches, ['alpha', 'beta']).map((m) => `${m.relPath}:${m.line}`),
+    ['b.md:1', 'a.md:1', 'a.md:2', 'a.md:3', 'c.md:1', 'c.md:2'],
+  );
+});
+
+test('filterPathMatches keeps only paths containing a keyword, case-insensitively', () => {
+  const paths = ['github/RayTracerCUDA/src/scene.h', 'notes/SLAM.md'];
+  assert.deepEqual(filterPathMatches(paths, ['raytracercuda']), [
+    'github/RayTracerCUDA/src/scene.h',
+  ]);
+  assert.deepEqual(filterPathMatches(paths, ['missing']), []);
+});
+
+test('rankPathMatches orders paths by keyword coverage', () => {
+  const paths = ['a/beta.md', 'b/alpha-beta.md'];
+  assert.deepEqual(rankPathMatches(paths, ['alpha', 'beta']), [
+    'b/alpha-beta.md',
+    'a/beta.md',
   ]);
 });
