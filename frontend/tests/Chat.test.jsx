@@ -68,7 +68,7 @@ test('sends conversation history and renders the streamed answer', async () => {
   expect(await screen.findByText('Second answer')).toBeInTheDocument();
 });
 
-test('shows tool status after streamed text until the answer resumes', async () => {
+test('interleaves text parts with persistent tool call chips', async () => {
   let resumeStream;
   const streamPaused = new Promise((resolve) => {
     resumeStream = resolve;
@@ -76,8 +76,9 @@ test('shows tool status after streamed text until the answer resumes', async () 
   streamChat.mockImplementation(async function* toolAfterTextStream() {
     yield { type: 'token', text: 'First part.' };
     yield { type: 'status', text: 'Searching' };
+    yield { type: 'status', text: 'Reading' };
     await streamPaused;
-    yield { type: 'token', text: ' Second part.' };
+    yield { type: 'token', text: 'Second part.' };
     yield { type: 'done' };
   });
   const user = userEvent.setup();
@@ -89,18 +90,24 @@ test('shows tool status after streamed text until the answer resumes', async () 
   );
   await user.click(screen.getByRole('button', { name: 'Send' }));
 
+  // While the group is at the streaming frontier, only the current tool
+  // shows, as the animated status line; nothing is collapsed yet.
   expect(await screen.findByText('First part.')).toBeInTheDocument();
-  expect(await screen.findByText('Searching')).toBeInTheDocument();
+  expect(await screen.findByText('Reading')).toBeInTheDocument();
+  expect(screen.queryByText('Searching')).not.toBeInTheDocument();
+  expect(screen.queryByText('2 tool calls')).not.toBeInTheDocument();
 
   await act(async () => {
     resumeStream();
   });
 
-  expect(await screen.findByText('First part. Second part.')).toBeInTheDocument();
-  expect(screen.queryByText('Searching')).not.toBeInTheDocument();
+  // Once narration follows, the group collapses into a disclosure and stays.
+  expect(await screen.findByText('Second part.')).toBeInTheDocument();
+  expect(screen.getByText('First part.')).toBeInTheDocument();
+  expect(screen.getByText('2 tool calls')).toBeInTheDocument();
 });
 
-test('clears tool status when the backend returns an error', async () => {
+test('keeps tool call chips when the backend returns an error', async () => {
   streamChat.mockImplementation(async function* emptyFinalAnswerStream() {
     yield { type: 'token', text: 'First part.' };
     yield { type: 'status', text: 'Searching' };
@@ -117,7 +124,7 @@ test('clears tool status when the backend returns an error', async () => {
 
   expect(await screen.findByText('Backend failed.')).toBeInTheDocument();
   expect(screen.getByText('First part.')).toBeInTheDocument();
-  expect(screen.queryByText('Searching')).not.toBeInTheDocument();
+  expect(screen.getByText('1 tool call')).toBeInTheDocument();
 });
 
 test('shows a generic error when the chat connection fails', async () => {

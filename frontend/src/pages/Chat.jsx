@@ -57,7 +57,8 @@ function MarkdownTable(tableProps) {
 function loadSessionMessages() {
   try {
     const messages = JSON.parse(sessionStorage.getItem(SESSION_MESSAGES_KEY));
-    return Array.isArray(messages) ? messages : [];
+    if (!Array.isArray(messages)) return [];
+    return messages.map((message) => ({ ...message, streaming: false }));
   } catch {
     return [];
   }
@@ -71,7 +72,7 @@ function loadSessionModel() {
 function markResponseStopped(messages, assistantId) {
   return messages.map((message) =>
     message.id === assistantId
-      ? { ...message, status: '', citations: [], stopped: true }
+      ? { ...message, streaming: false, citations: [], stopped: true }
       : message,
   );
 }
@@ -214,6 +215,13 @@ function Message({ message }) {
     );
   }
 
+  // Old sessions persisted only `content`; render it as a single text part.
+  const parts = message.parts?.length
+    ? message.parts
+    : message.content
+      ? [{ type: 'text', text: message.content }]
+      : [];
+
   return (
     <div className="flex flex-col gap-2">
       {message.model && (
@@ -221,23 +229,47 @@ function Message({ message }) {
           {MODELS.find((model) => model.value === message.model)?.label}
         </span>
       )}
-      {message.content && (
-        <article className="chat-prose prose prose-neutral max-w-none text-[15px] leading-relaxed prose-headings:tracking-tight prose-p:my-2 prose-p:first:mt-0 prose-p:last:mb-0 prose-li:my-0.5 prose-a:text-sky-700 prose-a:no-underline hover:prose-a:underline prose-pre:rounded-lg prose-pre:border prose-pre:border-neutral-200 prose-pre:bg-neutral-950 prose-pre:text-neutral-50">
-          <ReactMarkdown
-            remarkPlugins={[remarkGfm, remarkMath]}
-            rehypePlugins={[rehypeKatex, rehypeHighlight]}
-            components={{ table: MarkdownTable }}
-          >
-            {normalizeMathDelimiters(message.content)}
-          </ReactMarkdown>
-        </article>
+      {parts.map((part, index) =>
+        part.type === 'tools' ? (
+          // The group at the streaming frontier shows the current tool as
+          // the animated status line; it collapses into a disclosure once
+          // narration follows or the response ends.
+          message.streaming && index === parts.length - 1 ? (
+            <div key={index} className="flex items-center gap-1.5 text-sm text-neutral-500">
+              <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-sky-400 [animation-delay:-0.3s]" />
+              <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-sky-400 [animation-delay:-0.15s]" />
+              <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-sky-400" />
+              <span className="ml-1">{part.calls.at(-1)}</span>
+            </div>
+          ) : (
+            <details key={index} className="text-sm">
+              <summary className="cursor-pointer select-none text-xs text-neutral-400 hover:text-neutral-600">
+                {part.calls.length} tool call{part.calls.length === 1 ? '' : 's'}
+              </summary>
+              <ul className="mt-1.5 flex flex-col gap-1 text-xs text-neutral-500">
+                {part.calls.map((call, callIndex) => (
+                  <li key={callIndex}>{call}</li>
+                ))}
+              </ul>
+            </details>
+          )
+        ) : (
+          <article key={index} className="chat-prose prose prose-neutral max-w-none text-[15px] leading-relaxed prose-headings:tracking-tight prose-p:my-2 prose-p:first:mt-0 prose-p:last:mb-0 prose-li:my-0.5 prose-a:text-sky-700 prose-a:no-underline hover:prose-a:underline prose-pre:rounded-lg prose-pre:border prose-pre:border-neutral-200 prose-pre:bg-neutral-950 prose-pre:text-neutral-50">
+            <ReactMarkdown
+              remarkPlugins={[remarkGfm, remarkMath]}
+              rehypePlugins={[rehypeKatex, rehypeHighlight]}
+              components={{ table: MarkdownTable }}
+            >
+              {normalizeMathDelimiters(part.text)}
+            </ReactMarkdown>
+          </article>
+        ),
       )}
-      {message.status && (
-        <div className="flex items-center gap-1.5 text-sm text-neutral-500">
+      {message.streaming && parts.at(-1)?.type !== 'tools' && (
+        <div className="flex items-center gap-1.5">
           <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-sky-400 [animation-delay:-0.3s]" />
           <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-sky-400 [animation-delay:-0.15s]" />
           <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-sky-400" />
-          <span className="ml-1">{message.status}</span>
         </div>
       )}
       {message.stopped && (
@@ -409,7 +441,8 @@ export default function Chat() {
         role: 'assistant',
         model,
         content: '',
-        status: '',
+        parts: [],
+        streaming: true,
         citations: [],
       },
     ]);
@@ -429,16 +462,31 @@ export default function Chat() {
         if (controller.signal.aborted) break;
 
         if (event.type === 'status') {
-          updateAssistant(assistantId, () => ({ status: event.text }));
+          updateAssistant(assistantId, (m) => {
+            const parts = m.parts.slice();
+            const last = parts.at(-1);
+            if (last?.type === 'tools') {
+              parts[parts.length - 1] = { ...last, calls: [...last.calls, event.text] };
+            } else {
+              parts.push({ type: 'tools', calls: [event.text] });
+            }
+            return { parts };
+          });
         } else if (event.type === 'token') {
-          updateAssistant(assistantId, (m) => ({
-            status: '',
-            content: m.content + event.text,
-          }));
+          updateAssistant(assistantId, (m) => {
+            const parts = m.parts.slice();
+            const last = parts.at(-1);
+            if (last?.type === 'text') {
+              parts[parts.length - 1] = { ...last, text: last.text + event.text };
+            } else {
+              parts.push({ type: 'text', text: event.text });
+            }
+            return { parts, content: m.content + event.text };
+          });
         } else if (event.type === 'citations') {
           updateAssistant(assistantId, () => ({ citations: event.citations }));
         } else if (event.type === 'error') {
-          updateAssistant(assistantId, () => ({ status: '' }));
+          updateAssistant(assistantId, () => ({ streaming: false }));
           setError(event.message);
         }
       }
@@ -448,6 +496,7 @@ export default function Chat() {
         setError('Connection failed.');
       }
     } finally {
+      updateAssistant(assistantId, () => ({ streaming: false }));
       if (abortRef.current === controller) {
         setIsStreaming(false);
         abortRef.current = null;
