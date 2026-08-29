@@ -1,6 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk';
 
-import { FINAL_SYSTEM_PROMPT, SYSTEM_PROMPT } from './system-prompt.js';
+import { FINAL_USER_PROMPT, SYSTEM_PROMPT } from './system-prompt.js';
 import { TOOLS } from './tool-definitions.js';
 
 const EFFORT = process.env.ANTHROPIC_EFFORT || 'medium';
@@ -82,11 +82,16 @@ export async function* runAnthropic({ messages }, signal, model, runtime) {
   }
 
   if (exhaustedToolRounds) {
+    const lastMessage = conversation.at(-1);
+    lastMessage.content = [
+      ...lastMessage.content,
+      { type: 'text', text: FINAL_USER_PROMPT },
+    ];
     const started = Date.now();
     const providerRound = runtime.maxToolRounds + 1;
     const request = {
       model,
-      system: FINAL_SYSTEM_PROMPT,
+      system: SYSTEM_PROMPT,
       messages: conversation,
       max_tokens: runtime.maxTokens,
       tools: TOOLS,

@@ -12,7 +12,5 @@ How to answer:
 Style:
 - Be warm and concise. Lead with the answer.`;
 
-export const FINAL_SYSTEM_PROMPT = `${SYSTEM_PROMPT}
-
-Final response requirement:
-You have reached the maximum number of tool rounds. Using the tool results already available, provide a nonempty final answer to the user now. If the available evidence is insufficient, explain that limitation in the answer.`;
+// Appended as a user message when a provider loop exhausts its tool rounds
+export const FINAL_USER_PROMPT = 'You have reached the maximum number of tool rounds. Using the tool results already available, provide a nonempty final answer now. If the available evidence is insufficient, say so in the answer.';

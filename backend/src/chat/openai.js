@@ -1,6 +1,6 @@
 import OpenAI from 'openai';
 
-import { FINAL_SYSTEM_PROMPT, SYSTEM_PROMPT } from './system-prompt.js';
+import { FINAL_USER_PROMPT, SYSTEM_PROMPT } from './system-prompt.js';
 import { TOOLS } from './tool-definitions.js';
 
 const EFFORT = process.env.OPENAI_REASONING_EFFORT || 'medium';
@@ -98,11 +98,12 @@ export async function* runOpenAI({ messages }, signal, model, runtime) {
   }
 
   if (exhaustedToolRounds) {
+    conversation.push({ role: 'user', content: FINAL_USER_PROMPT });
     const started = Date.now();
     const providerRound = runtime.maxToolRounds + 1;
     const request = {
       model,
-      instructions: FINAL_SYSTEM_PROMPT,
+      instructions: SYSTEM_PROMPT,
       input: conversation,
       max_output_tokens: runtime.maxTokens,
       tools: OPENAI_TOOLS,
