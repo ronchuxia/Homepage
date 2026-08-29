@@ -27,7 +27,7 @@ beforeEach(() => {
 test('starts with prompts and a disabled send button', () => {
   renderChat();
 
-  expect(screen.getByRole('heading', { name: 'Ask my AI agent' })).toBeInTheDocument();
+  expect(screen.getByRole('heading', { name: 'Ask my AI assistant' })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Send' })).toBeDisabled();
   expect(
     screen.getByRole('button', { name: "What are Xia's main robotics projects?" }),

@@ -8,9 +8,9 @@ import { Link } from 'react-router-dom';
 import { streamChat } from '../lib/chatClient';
 
 const STARTER_PROMPTS = [
-  "What are Xia's main robotics projects?",
-  "Summarize Xia's notes on reinforcement learning.",
-  'What experience does Xia have with SLAM?',
+  "What are Xia's robotics projects?",
+  "How does Xia's F1Tenth autonomous racing stack work?",
+  "What is Xia's background and experience?",
 ];
 
 const SESSION_MESSAGES_KEY = 'homepage-chat-messages';
@@ -544,11 +544,11 @@ export default function Chat() {
           {isEmpty ? (
             <div className="flex min-h-[calc(100vh-16rem)] animate-fade-up flex-col items-center justify-center text-center motion-reduce:animate-none">
               <h1 className="text-3xl font-semibold tracking-tight">
-                Ask my AI agent
+                Ask My AI Assistant
               </h1>
               <p className="mt-3 max-w-md text-neutral-500">
-                Grounded in Xia&apos;s notes and projects. Ask about the work,
-                the ideas, or where to start reading.
+                The agent searches Xia&apos;s notes, GitHub repos, and project
+                materials, and cites its sources.
               </p>
               <div className="mt-8 flex w-full max-w-md flex-col gap-2">
                 {STARTER_PROMPTS.map((prompt) => (
@@ -587,7 +587,7 @@ export default function Chat() {
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
               rows={1}
-              placeholder="Ask anything about Xia's work…"
+              placeholder="Ask me anything about Xia..."
               className="max-h-40 flex-1 resize-none bg-transparent py-1.5 text-[15px] text-neutral-900 placeholder:text-neutral-400 focus:outline-none"
             />
             {!isEmpty && (
@@ -632,7 +632,7 @@ export default function Chat() {
             )}
           </div>
           <p className="mt-2 text-center text-xs text-neutral-400">
-            Agent may be wrong; check the cited notes.
+            The assistant can make mistakes. Check the cited sources.
           </p>
         </div>
       </div>
