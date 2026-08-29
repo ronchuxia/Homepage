@@ -22,6 +22,19 @@ const CORS_HEADERS = {
   'Access-Control-Allow-Headers': 'content-type',
 };
 
+function publicErrorMessage(error) {
+  if (
+    (error.status === 429 && error.code === 'insufficient_quota') ||
+    (error.status === 400 && error.message?.includes('credit balance'))
+  ) {
+    return 'The AI service is out of credits. Try another provider.';
+  }
+  if (error.status === 429 || error.status >= 500) {
+    return 'The AI service is temporarily overloaded. Try again later.';
+  }
+  return 'Backend failed.';
+}
+
 function readJsonBody(req) {
   return new Promise((resolve, reject) => {
     let data = '';
@@ -102,7 +115,7 @@ const server = createServer(async (req, res) => {
       terminalError = error;
       if (!controller.signal.aborted) {
         console.error('Chat backend failed:', error);
-        send({ type: 'error', message: 'Backend failed.' });
+        send({ type: 'error', message: publicErrorMessage(error) });
       }
     } finally {
       const status = controller.signal.aborted
