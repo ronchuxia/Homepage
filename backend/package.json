@@ -11,7 +11,7 @@
     "dev": "node --watch --env-file-if-exists=.env.local src/server.js",
     "start": "node --env-file-if-exists=.env.local src/server.js",
     "build:corpus": "node scripts/build-corpus.mjs",
-    "test": "node --test tests/*.test.js",
+    "test": "node --experimental-test-module-mocks --test tests/*.test.js",
     "test:watch": "node --test --watch tests/*.test.js"
   },
   "dependencies": {

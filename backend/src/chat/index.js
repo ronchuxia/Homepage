@@ -96,6 +96,31 @@ export async function* runChat(payload = {}, signal, trace) {
   yield* runAnthropic(payload, signal, model, runtime);
 }
 
+export async function pumpChat(payload, send, signal) {
+  const trace = createTrace();
+  trace.setRequest(payload);
+
+  let terminalError;
+  try {
+    for await (const event of runChat(payload, signal, trace)) {
+      send(event);
+    }
+  } catch (error) {
+    terminalError = error;
+    if (!signal.aborted) {
+      console.error('Chat backend failed:', error);
+      send({ type: 'error', message: publicErrorMessage(error) });
+    }
+  } finally {
+    const status = signal.aborted
+      ? 'aborted'
+      : terminalError
+        ? 'failed'
+        : 'completed';
+    await trace.finalize(status, terminalError);
+  }
+}
+
 export async function serveChatRequest(req, res) {
   let payload;
   try {
@@ -106,9 +131,6 @@ export async function serveChatRequest(req, res) {
     res.end(JSON.stringify({ error: 'invalid request body' }));
     return;
   }
-
-  const trace = createTrace();
-  trace.setRequest(payload);
 
   res.writeHead(200, {
     'Content-Type': 'text/event-stream',
@@ -123,25 +145,9 @@ export async function serveChatRequest(req, res) {
   res.on('close', () => controller.abort());
 
   const send = (event) => res.write(`data: ${JSON.stringify(event)}\n\n`);
-
-  let terminalError;
   try {
-    for await (const event of runChat(payload, controller.signal, trace)) {
-      send(event);
-    }
-  } catch (error) {
-    terminalError = error;
-    if (!controller.signal.aborted) {
-      console.error('Chat backend failed:', error);
-      send({ type: 'error', message: publicErrorMessage(error) });
-    }
+    await pumpChat(payload, send, controller.signal);
   } finally {
-    const status = controller.signal.aborted
-      ? 'aborted'
-      : terminalError
-        ? 'failed'
-        : 'completed';
-    await trace.finalize(status, terminalError);
     res.end();
   }
 }
