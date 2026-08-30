@@ -27,10 +27,10 @@ beforeEach(() => {
 test('starts with prompts and a disabled send button', () => {
   renderChat();
 
-  expect(screen.getByRole('heading', { name: 'Ask my AI assistant' })).toBeInTheDocument();
+  expect(screen.getByRole('heading', { name: 'Ask My AI Assistant' })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Send' })).toBeDisabled();
   expect(
-    screen.getByRole('button', { name: "What are Xia's main robotics projects?" }),
+    screen.getByRole('button', { name: "What are Xia's robotics projects?" }),
   ).toBeInTheDocument();
 });
 
@@ -48,7 +48,7 @@ test('sends conversation history and renders the streamed answer', async () => {
   renderChat();
 
   await user.type(
-    screen.getByPlaceholderText("Ask anything about Xia's work…"),
+    screen.getByPlaceholderText('Ask me anything about Xia...'),
     'Follow up',
   );
   await user.click(screen.getByRole('button', { name: 'Send' }));
@@ -85,7 +85,7 @@ test('interleaves text parts with persistent tool call chips', async () => {
   renderChat();
 
   await user.type(
-    screen.getByPlaceholderText("Ask anything about Xia's work…"),
+    screen.getByPlaceholderText('Ask me anything about Xia...'),
     'Use a tool',
   );
   await user.click(screen.getByRole('button', { name: 'Send' }));
@@ -117,7 +117,7 @@ test('keeps tool call chips when the backend returns an error', async () => {
   renderChat();
 
   await user.type(
-    screen.getByPlaceholderText("Ask anything about Xia's work…"),
+    screen.getByPlaceholderText('Ask me anything about Xia...'),
     'Use too many tools',
   );
   await user.click(screen.getByRole('button', { name: 'Send' }));
@@ -138,7 +138,7 @@ test('shows a generic error when the chat connection fails', async () => {
   renderChat();
 
   await user.type(
-    screen.getByPlaceholderText("Ask anything about Xia's work…"),
+    screen.getByPlaceholderText('Ask me anything about Xia...'),
     'Hello',
   );
   await user.click(screen.getByRole('button', { name: 'Send' }));
