@@ -15,13 +15,6 @@ import { serveMaterialRequest } from './materials.js';
 
 const PORT = process.env.PORT || 8787;
 
-// Dev-only: the Vite dev server (a different origin) calls this, so allow CORS.
-const CORS_HEADERS = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'content-type',
-};
-
 function publicErrorMessage(error) {
   if (
     (error.status === 429 && error.code === 'insufficient_quota') ||
@@ -59,22 +52,14 @@ function readJsonBody(req) {
 const server = createServer(async (req, res) => {
   const url = new URL(req.url, `http://${req.headers.host}`);
 
-  if (req.method === 'OPTIONS') {
-    res.writeHead(204, CORS_HEADERS);
-    res.end();
-    return;
-  }
-
   if (req.method === 'GET' && url.pathname === '/health') {
-    res.writeHead(200, { 'Content-Type': 'application/json', ...CORS_HEADERS });
+    res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ status: 'ok' }));
     return;
   }
 
   if (req.method === 'GET' && url.pathname.startsWith('/materials/')) {
-    await serveMaterialRequest(res, url.pathname, {
-      headers: CORS_HEADERS,
-    });
+    await serveMaterialRequest(res, url.pathname);
     return;
   }
 
@@ -83,7 +68,7 @@ const server = createServer(async (req, res) => {
     try {
       payload = await readJsonBody(req);
     } catch {
-      res.writeHead(400, { 'Content-Type': 'application/json', ...CORS_HEADERS });
+      res.writeHead(400, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ error: 'invalid request body' }));
       return;
     }
@@ -95,7 +80,6 @@ const server = createServer(async (req, res) => {
       'Content-Type': 'text/event-stream',
       'Cache-Control': 'no-cache',
       Connection: 'keep-alive',
-      ...CORS_HEADERS,
     });
 
     // Stop generating if the client disconnects (e.g. the Stop button).
@@ -129,7 +113,7 @@ const server = createServer(async (req, res) => {
     return;
   }
 
-  res.writeHead(404, { 'Content-Type': 'application/json', ...CORS_HEADERS });
+  res.writeHead(404, { 'Content-Type': 'application/json' });
   res.end(JSON.stringify({ error: 'not found' }));
 });
 
