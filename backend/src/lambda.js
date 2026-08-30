@@ -5,8 +5,17 @@ import { stat } from 'node:fs/promises';
 import path from 'node:path';
 import { pipeline } from 'node:stream/promises';
 
+import { GetSecretValueCommand, SecretsManagerClient } from '@aws-sdk/client-secrets-manager';
+
 import { pumpChat, validateChatPayload } from './chat/index.js';
 import { MATERIALS_ROOT, safeMaterialPath } from './materials.js';
+
+if (process.env.PROVIDER_KEYS_SECRET_ARN) {
+  const response = await new SecretsManagerClient().send(
+    new GetSecretValueCommand({ SecretId: process.env.PROVIDER_KEYS_SECRET_ARN }),
+  );
+  Object.assign(process.env, JSON.parse(response.SecretString));
+}
 
 const DEADLINE_BUFFER_MS = 10_000;
 

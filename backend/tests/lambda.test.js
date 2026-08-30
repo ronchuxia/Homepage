@@ -26,7 +26,26 @@ mock.module('../src/chat/index.js', {
   },
 });
 
+// The adapter fetches provider keys from Secrets Manager at module load
+// when the secret ARN is set.
+mock.module('@aws-sdk/client-secrets-manager', {
+  namedExports: {
+    SecretsManagerClient: class {
+      async send() {
+        return { SecretString: JSON.stringify({ ANTHROPIC_API_KEY: 'secret-key' }) };
+      }
+    },
+    GetSecretValueCommand: class {},
+  },
+});
+process.env.PROVIDER_KEYS_SECRET_ARN = 'arn:aws:secretsmanager:us-east-1:0:secret:x';
+
 const { handleEvent } = await import('../src/lambda.js');
+delete process.env.PROVIDER_KEYS_SECRET_ARN;
+
+test('loads provider keys from the secret at module load', () => {
+  assert.equal(process.env.ANTHROPIC_API_KEY, 'secret-key');
+});
 
 function makeStream() {
   const stream = new Writable({
