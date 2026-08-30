@@ -4,50 +4,13 @@
 //   GET  /materials/<file-path>  -> public PDF
 //   POST /chat                   -> Server-Sent Events stream   the chat contract
 //
-// It is a thin transport adapter: it reads the request, calls runChat, and
-// writes the result back. The same logic can later be driven by a Lambda
-// streaming handler without changes.
+// A thin router: request handling lives in chat/index.js and materials.js.
 
 import { createServer } from 'node:http';
-import { runChat } from './chat/index.js';
-import { createTrace } from './logging/index.js';
+import { serveChatRequest } from './chat/index.js';
 import { serveMaterialRequest } from './materials.js';
 
 const PORT = process.env.PORT || 8787;
-
-function publicErrorMessage(error) {
-  if (
-    (error.status === 429 && error.code === 'insufficient_quota') ||
-    (error.status === 400 && error.message?.includes('credit balance'))
-  ) {
-    return 'The AI service is out of credits. Try another provider.';
-  }
-  if (error.status === 429 || error.status >= 500) {
-    return 'The AI service is temporarily overloaded. Try again later.';
-  }
-  return 'Backend failed.';
-}
-
-function readJsonBody(req) {
-  return new Promise((resolve, reject) => {
-    let data = '';
-    req.on('data', (chunk) => {
-      data += chunk;
-      if (data.length > 1_000_000) {
-        reject(new Error('payload too large'));
-        req.destroy();
-      }
-    });
-    req.on('end', () => {
-      try {
-        resolve(data ? JSON.parse(data) : {});
-      } catch (error) {
-        reject(error);
-      }
-    });
-    req.on('error', reject);
-  });
-}
 
 const server = createServer(async (req, res) => {
   const url = new URL(req.url, `http://${req.headers.host}`);
@@ -64,52 +27,7 @@ const server = createServer(async (req, res) => {
   }
 
   if (req.method === 'POST' && url.pathname === '/chat') {
-    let payload;
-    try {
-      payload = await readJsonBody(req);
-    } catch {
-      res.writeHead(400, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ error: 'invalid request body' }));
-      return;
-    }
-
-    const trace = createTrace();
-    trace.setRequest(payload);
-
-    res.writeHead(200, {
-      'Content-Type': 'text/event-stream',
-      'Cache-Control': 'no-cache',
-      Connection: 'keep-alive',
-    });
-
-    // Stop generating if the client disconnects (e.g. the Stop button).
-    // Listen on res: req 'close' fires when the request body completes (before
-    // this listener attaches), so an abort wired to it never triggers.
-    const controller = new AbortController();
-    res.on('close', () => controller.abort());
-
-    const send = (event) => res.write(`data: ${JSON.stringify(event)}\n\n`);
-
-    let terminalError;
-    try {
-      for await (const event of runChat(payload, controller.signal, trace)) {
-        send(event);
-      }
-    } catch (error) {
-      terminalError = error;
-      if (!controller.signal.aborted) {
-        console.error('Chat backend failed:', error);
-        send({ type: 'error', message: publicErrorMessage(error) });
-      }
-    } finally {
-      const status = controller.signal.aborted
-        ? 'aborted'
-        : terminalError
-          ? 'failed'
-          : 'completed';
-      await trace.finalize(status, terminalError);
-      res.end();
-    }
+    await serveChatRequest(req, res);
     return;
   }
 
