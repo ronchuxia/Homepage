@@ -73,7 +73,7 @@ async function extractPdf(corpusRoot, trackedFile, parsedPath) {
     const output = path.join(pagesPath, `page-${pageNumber}.txt`);
     await writeFile(output, `${[
       `Page: ${page}`,
-      `Source PDF: /materials/${trackedFile}`,
+      `Source PDF: /api/materials/${trackedFile}`,
       '',
       extracted,
     ].join('\n').trim()}\n`);
@@ -100,7 +100,7 @@ async function buildCorpus(corpusRoot, workDir, config) {
             root: `search/materials/${parsedPath}`,
             revision: { repo: source.url, sha },
             citation: {
-              base: new URL(`/materials/${trackedFile}`, config.publicBackendOrigin).toString(),
+              base: new URL(`/api/materials/${trackedFile}`, config.publicBackendOrigin).toString(),
             },
           });
         }

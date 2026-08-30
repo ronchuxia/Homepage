@@ -8,7 +8,7 @@ const markdownExtension = '.md';
 function parseArgs(argv) {
   const args = {
     source: '../notes',
-    out: 'public/notes',
+    out: 'public/content/notes',
   };
 
   for (let index = 0; index < argv.length; index += 1) {

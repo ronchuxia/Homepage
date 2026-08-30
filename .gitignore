@@ -10,16 +10,20 @@ config.env
 # dependencies & build output
 node_modules/
 frontend/dist/
+infra/cdk.out/
 
 # local env (e.g. VITE_CHAT_API_URL pointing at the local backend)
 .env.local
 .env*.local
 
 # generated notes (built fresh in CI from the notes repo)
-frontend/public/notes/
+frontend/public/content/
 
 # seed corpus for the chat backend (built fresh by backend/scripts/seed-corpus.mjs)
 backend/corpus/
 
 aws/
 scripts/
+
+backend/logs/
+materials/

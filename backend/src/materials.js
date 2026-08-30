@@ -13,12 +13,12 @@ import { CORPUS_ROOT, safeRelPath } from './corpus.js';
 
 export const MATERIALS_ROOT = path.join(CORPUS_ROOT, 'materials');
 
-// URL-decode a /materials/<path> request pathname and confine it to the
-// materials root.
+// URL-decode an /api/materials/<path> request pathname and confine it to
+// the materials root.
 export function safeMaterialPath(pathname) {
   let relative;
   try {
-    relative = decodeURIComponent(pathname.slice('/materials/'.length));
+    relative = decodeURIComponent(pathname.slice('/api/materials/'.length));
   } catch {
     throw new Error('path is invalid');
   }

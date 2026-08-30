@@ -105,17 +105,17 @@ export async function handleEvent(event, responseStream, context) {
   const method = event.httpMethod;
   const pathname = event.path;
 
-  if (method === 'GET' && pathname === '/health') {
+  if (method === 'GET' && pathname === '/api/health') {
     endStream(responseStream, 200, { status: 'ok' });
     return;
   }
 
-  if (method === 'GET' && pathname.startsWith('/materials/')) {
+  if (method === 'GET' && pathname.startsWith('/api/materials/')) {
     await serveMaterial(responseStream, pathname);
     return;
   }
 
-  if (method === 'POST' && pathname === '/chat') {
+  if (method === 'POST' && pathname === '/api/chat') {
     await serveChat(event, responseStream, context);
     return;
   }

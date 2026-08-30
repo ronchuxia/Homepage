@@ -6,9 +6,7 @@ export default defineConfig({
   plugins: [react()],
   server: {
     proxy: {
-      '/chat': 'http://localhost:8787',
-      '/materials': 'http://localhost:8787',
-      '/health': 'http://localhost:8787',
+      '/api': 'http://localhost:8787',
     },
   },
   test: {

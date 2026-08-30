@@ -28,7 +28,7 @@ const sources = [
     type: 'materials',
     root: 'search/materials/profile/resume',
     citation: {
-      base: 'https://api.example.com/materials/profile/resume.pdf',
+      base: 'https://api.example.com/api/materials/profile/resume.pdf',
     },
   },
   {
@@ -116,7 +116,7 @@ test('buildCitation creates PDF page links', () => {
       source: 'profile',
       title: 'resume.pdf',
       type: 'materials',
-      url: 'https://api.example.com/materials/profile/resume.pdf#page=2',
+      url: 'https://api.example.com/api/materials/profile/resume.pdf#page=2',
       path: 'search/materials/profile/resume/pages/page-0002.txt',
     },
   );

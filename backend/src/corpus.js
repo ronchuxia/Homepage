@@ -116,7 +116,7 @@ export function buildCitation(relPath, sources, range = {}) {
 
   if (source.type === 'materials') {
     const pageNumber = Number(path.basename(relPath, '.txt').slice('page-'.length));
-    const materialParts = new URL(citation.base).pathname.slice('/materials/'.length).split('/');
+    const materialParts = new URL(citation.base).pathname.slice('/api/materials/'.length).split('/');
     const materialSource = materialParts.length > 1 ? materialParts[0] : 'Materials';
     const materialTitle = materialParts.at(-1);
     return {

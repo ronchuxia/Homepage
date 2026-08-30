@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build:notes": "node scripts/build-notes-index.mjs --source ../notes --out public/notes",
+    "build:notes": "node scripts/build-notes-index.mjs --source ../notes --out public/content/notes",
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",

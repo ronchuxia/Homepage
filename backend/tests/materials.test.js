@@ -40,8 +40,8 @@ async function createMaterialFixture() {
 }
 
 test('safeMaterialPath confines paths to the materials root', () => {
-  assert.equal(safeMaterialPath('/materials/project/report.pdf'), 'project/report.pdf');
-  assert.throws(() => safeMaterialPath('/materials/%2e%2e/outside.pdf'), /path escapes the corpus/);
+  assert.equal(safeMaterialPath('/api/materials/project/report.pdf'), 'project/report.pdf');
+  assert.throws(() => safeMaterialPath('/api/materials/%2e%2e/outside.pdf'), /path escapes the corpus/);
 });
 
 test('serveMaterialRequest serves a full response', async () => {
@@ -50,7 +50,7 @@ test('serveMaterialRequest serves a full response', async () => {
     const full = new TestResponse();
     await serveMaterialRequest(
       full,
-      '/materials/project/report.pdf',
+      '/api/materials/project/report.pdf',
       { root },
     );
     assert.equal(full.statusCode, 200);
@@ -67,7 +67,7 @@ test('serveMaterialRequest returns generic errors for invalid paths', async () =
     const traversal = new TestResponse();
     await serveMaterialRequest(
       traversal,
-      '/materials/%2e%2e/outside.pdf',
+      '/api/materials/%2e%2e/outside.pdf',
       { root },
     );
     assert.equal(traversal.statusCode, 404);
@@ -76,7 +76,7 @@ test('serveMaterialRequest returns generic errors for invalid paths', async () =
     const missing = new TestResponse();
     await serveMaterialRequest(
       missing,
-      '/materials/project/missing.pdf',
+      '/api/materials/project/missing.pdf',
       { root },
     );
     assert.equal(missing.statusCode, 404);

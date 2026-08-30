@@ -7,7 +7,7 @@ import rehypeKatex from 'rehype-katex';
 import rehypeHighlight from 'rehype-highlight';
 import rehypeSlug from 'rehype-slug';
 
-const NOTES_BASE_URL = '/notes';
+const NOTES_BASE_URL = '/content/notes';
 const NOTES_INDEX_URL = `${NOTES_BASE_URL}/index.json`;
 
 function getRouteSlug(pathname) {

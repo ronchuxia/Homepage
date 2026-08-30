@@ -44,7 +44,7 @@ const context = { getRemainingTimeInMillis: () => 300_000 };
 function chatEvent(payload) {
   return {
     httpMethod: 'POST',
-    path: '/chat',
+    path: '/api/chat',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify(payload),
   };
@@ -52,7 +52,7 @@ function chatEvent(payload) {
 
 test('serves /health', async () => {
   const stream = makeStream();
-  await handleEvent({ httpMethod: 'GET', path: '/health', headers: {} }, stream, context);
+  await handleEvent({ httpMethod: 'GET', path: '/api/health', headers: {} }, stream, context);
   assert.equal(stream.metadata.statusCode, 200);
   assert.deepEqual(JSON.parse(stream.body), { status: 'ok' });
 });
@@ -66,7 +66,7 @@ test('returns 404 for unknown routes', async () => {
 test('returns 404 for a missing material', async () => {
   const stream = makeStream();
   await handleEvent(
-    { httpMethod: 'GET', path: '/materials/does-not-exist.pdf', headers: {} },
+    { httpMethod: 'GET', path: '/api/materials/does-not-exist.pdf', headers: {} },
     stream,
     context,
   );
@@ -79,12 +79,12 @@ test('rejects requests without the origin secret when configured', async (t) => 
   t.after(() => delete process.env.CHAT_ORIGIN_SECRET);
 
   const denied = makeStream();
-  await handleEvent({ httpMethod: 'GET', path: '/health', headers: {} }, denied, context);
+  await handleEvent({ httpMethod: 'GET', path: '/api/health', headers: {} }, denied, context);
   assert.equal(denied.metadata.statusCode, 403);
 
   const allowed = makeStream();
   await handleEvent(
-    { httpMethod: 'GET', path: '/health', headers: { 'X-Origin-Verify': 'expected' } },
+    { httpMethod: 'GET', path: '/api/health', headers: { 'X-Origin-Verify': 'expected' } },
     allowed,
     context,
   );

@@ -67,5 +67,5 @@ jobs:
             --cache-control no-cache --content-type text/html
           aws s3 sync dist/assets/ s3://xiachu-homepage/assets/ \
             --cache-control max-age=31536000
-          aws s3 sync dist/notes/ s3://xiachu-homepage/notes/ \
+          aws s3 sync dist/content/notes/ s3://xiachu-homepage/content/notes/ \
             --cache-control max-age=300
