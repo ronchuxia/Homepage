@@ -45,7 +45,6 @@ const backend = new lambda.DockerImageFunction(stack, 'Backend', {
   architecture: lambda.Architecture.ARM_64,
   memorySize: 512,
   timeout: Duration.seconds(180),
-  reservedConcurrentExecutions: 5,
   logGroup: new logs.LogGroup(stack, 'BackendLogs', {
     retention: logs.RetentionDays.ONE_MONTH,
   }),
