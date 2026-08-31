@@ -3,6 +3,7 @@
 import { createReadStream } from 'node:fs';
 import { stat } from 'node:fs/promises';
 import path from 'node:path';
+import { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 
 import { GetSecretValueCommand, SecretsManagerClient } from '@aws-sdk/client-secrets-manager';
@@ -19,12 +20,16 @@ if (process.env.PROVIDER_KEYS_SECRET_ARN) {
 
 const DEADLINE_BUFFER_MS = 10_000;
 
-function endStream(stream, statusCode, body) {
+// Writes the body through pipeline rather than a single end(payload):
+// ending the response stream in the same tick it is wrapped drops the
+// metadata prelude on the real Lambda runtime and API Gateway rejects
+// the response.
+async function endStream(stream, statusCode, body) {
   const out = awslambda.HttpResponseStream.from(stream, {
     statusCode,
     headers: { 'Content-Type': 'application/json' },
   });
-  out.end(JSON.stringify(body));
+  await pipeline(Readable.from(JSON.stringify(body)), out);
 }
 
 function getHeader(event, name) {
@@ -42,7 +47,7 @@ async function serveMaterial(responseStream, pathname) {
     info = await stat(absolute);
   } catch (error) {
     console.error(`Material request failed for ${pathname}:`, error);
-    endStream(responseStream, 404, { error: 'material not found' });
+    await endStream(responseStream, 404, { error: 'material not found' });
     return;
   }
 
@@ -74,7 +79,7 @@ async function serveChat(event, responseStream, context) {
     payload = raw ? JSON.parse(raw) : {};
     validateChatPayload(payload);
   } catch {
-    endStream(responseStream, 400, { error: 'invalid request body' });
+    await endStream(responseStream, 400, { error: 'invalid request body' });
     return;
   }
 
@@ -107,7 +112,7 @@ async function serveChat(event, responseStream, context) {
 export async function handleEvent(event, responseStream, context) {
   const secret = process.env.CHAT_ORIGIN_SECRET;
   if (secret && getHeader(event, 'x-origin-verify') !== secret) {
-    endStream(responseStream, 403, { error: 'forbidden' });
+    await endStream(responseStream, 403, { error: 'forbidden' });
     return;
   }
 
@@ -115,7 +120,7 @@ export async function handleEvent(event, responseStream, context) {
   const pathname = event.path;
 
   if (method === 'GET' && pathname === '/api/health') {
-    endStream(responseStream, 200, { status: 'ok' });
+    await endStream(responseStream, 200, { status: 'ok' });
     return;
   }
 
@@ -129,7 +134,7 @@ export async function handleEvent(event, responseStream, context) {
     return;
   }
 
-  endStream(responseStream, 404, { error: 'not found' });
+  await endStream(responseStream, 404, { error: 'not found' });
 }
 
 export const handler = awslambda.streamifyResponse(handleEvent);
