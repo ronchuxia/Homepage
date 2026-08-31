@@ -48,6 +48,8 @@ jobs:
 
       - name: Build the site
         working-directory: frontend
+        env:
+          VITE_CHAT_API_URL: /api/chat
         run: npm run build
 
       - name: Configure AWS credentials (OIDC, no stored keys)
