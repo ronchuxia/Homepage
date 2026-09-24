@@ -109,7 +109,7 @@ function getMarkdownNoteLink(href, notePath) {
   const targetPath = normalizeNotePath(`${noteFolder}/${hrefPath}`);
   const slug = targetPath.replace(/\.md$/i, '');
 
-  return `${NOTES_BASE_URL}/${encodePath(slug)}${query}${hash}`;
+  return `/notes/${encodePath(slug)}${query}${hash}`;
 }
 
 function getHashHeadingPath(hash) {
