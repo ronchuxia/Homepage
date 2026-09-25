@@ -45,7 +45,10 @@ function isNoteVisible(tree, slug, expandedFolders) {
 // Percent-encode each path segment (note names can contain spaces and other
 // URL-significant characters) while keeping the "/" separators intact.
 function encodePath(notePath) {
-  return notePath.split('/').map(encodeURIComponent).join('/');
+  return notePath
+    .split('/')
+    .map((segment) => encodeURIComponent(segment).replaceAll('%2C', ','))
+    .join('/');
 }
 
 function getNoteUrl(notePath) {
